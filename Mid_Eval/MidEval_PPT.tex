@@ -1,0 +1,1485 @@
+\documentclass{beamer}
+% Theme and Color Theme
+\usetheme{Warsaw}
+% --- Remove the bottom navigation bar ---
+\setbeamertemplate{footline}{}
+\usepackage[none]{hyphenat}
+% Packages
+\usepackage{ragged2e}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{transparent}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tabularx}
+\usepackage{array}
+% Colors
+\definecolor{Maroon}{cmyk}{0, 0.87, 0.68, 0.32}
+\definecolor{Red}{cmyk}{0, 1, 1, 0}
+\definecolor{Grey}{cmyk}{0, 0, 0, 0.5}
+\definecolor{DarkGreenOverlay}{rgb}{0.1, 0.1, 0.1}
+\definecolor{White}{rgb}{1,1,1}
+\definecolor{DarkBackground}{rgb}{0.1, 0.1, 0.1}
+\definecolor{LightGreyOverlay}{rgb}{0.5, 0.5, 0.5}
+% Set the color palette
+\setbeamercolor{normal text}{bg=DarkBackground,fg=White}
+\setbeamercolor{block title}{bg=Maroon, fg=white}
+\setbeamertemplate{frametitle}{\vspace*{2ex}\insertframetitle\vspace*{1ex}}
+\setbeamercolor{frametitle}{bg=DarkBackground,fg=White}
+\setbeamercolor{item}{fg=White}
+\setbeamertemplate{itemize item}{$\bullet$}
+% Title and Author Information
+\title{Predicting Urban Growth in Hyderabad: A Hybrid Cellular Automata Approach}
+\author{Presented by: [Your Name]\\International Institute of Information Technology, Hyderabad}
+\begin{document}
+
+% --- Slide 1: Title Slide ---
+{
+\usebackgroundtemplate{\includegraphics[width=\paperwidth,height=\paperheight]{city.jpg}}
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[DarkGreenOverlay, opacity=0.7] (current page.south west) rectangle (current page.north east);
+    \node[anchor=west, text width=0.6\paperwidth, xshift=1cm, yshift=0cm, align=left] at (current page.west) {
+      \Huge\color{White}\textbf{Predicting Urban Growth in Hyderabad}\\[0.5em]
+      \Large\color{White}A Hybrid CA-MLR-GA Modeling Framework\\[1em]
+      \normalsize\color{White}\textbf{Presented by:} Anagha, Valli, Abhinaya, Vishakha\\
+      \small\color{White}International Institute of Information Technology, Hyderabad\\[0.5em]
+      \small\color{White}\today
+    };
+  \end{tikzpicture}
+\end{frame}
+}
+
+% Helper macro
+\newcommand{\overlaybox}[2][]{%
+\begin{frame}[plain]
+\frametitle{#1}
+\begin{tikzpicture}[remember picture, overlay]
+    \node[
+        fill=LightGreyOverlay,
+        opacity=0.2,
+        text opacity=1,
+        align=justify,
+        anchor=center,
+        minimum width=\paperwidth-1cm,
+        minimum height=\paperheight-1cm,
+        text width=\paperwidth-2.5cm
+    ] at (current page.center) { \color{White} #2 };
+\end{tikzpicture}
+\end{frame}
+}
+
+% --- SLIDE 2: Project Statement and Scope ---
+\overlaybox[Project Statement and Scope]{
+\textbf{Objective}
+\begin{itemize}
+    \item Comprehensive urban growth modeling with multiple future scenarios
+     \item{Current: Single scenario with rigorous validation}
+    \item Emphasize driver analysis, model calibration, and accuracy validation
+\end{itemize}
+\vspace{0.5em}
+
+
+
+}
+
+% --- SLIDE 3: Research Motivation ---
+\overlaybox[Why This Research Matters]{
+\textbf{Hyderabad's Rapid Urban Transformation}
+\begin{itemize}
+    \item Hyderabad is a \textbf{Tier-I metropolitan region} and major IT hub in India
+    \item Population of approximately \textbf{10 million residents} and growing rapidly
+    \item Experiencing rapid spatial expansion consuming agricultural lands and natural areas
+    \item Urban sprawl threatens environmental sustainability.
+\end{itemize}
+
+\textbf{The Critical Planning Challenge}
+\begin{itemize}
+    \item Predicting \textit{how much} a city will grow is relatively straightforward
+    \item The crucial question is: WHERE will this growth occur spatially?
+    
+\end{itemize}
+
+}
+% --- SLIDE 3: Research Motivation ---
+\overlaybox[Why This Research Matters]{
+\begin{itemize}
+\item Urban planners need spatially explicit predictions to:
+\begin{itemize}
+        \item Guide infrastructure investment decisions
+        \item Protect environmentally sensitive areas
+        \item Manage growth sustainably
+    \end{itemize}
+        
+\end{itemize}
+\textbf{Our Solution}
+\begin{itemize}
+    \item Hybrid framework combining MLR + CA + GA optimization
+    \item Answers both "how much" AND "where" simultaneously
+    \item Enables data-driven urban planning for sustainable development
+\end{itemize}
+}
+
+
+
+% --- SLIDE 5: Literature Context ---
+\overlaybox[Background: Evolution of Urban Growth Models]{
+\textbf{Traditional CA Models: The SLEUTH Foundation}
+\begin{itemize}
+    \item \textbf{Clarke et al. (1997):} Pioneered CA-based urban growth modeling
+    \item SLEUTH model components:
+    \begin{itemize}
+        \item \textbf{S}lope, \textbf{L}and use, \textbf{E}xclusion, \textbf{U}rban extent, \textbf{T}ransportation, \textbf{H}ill shade
+        \item Fixed transition rules based on bio-physical variables
+        \item Globally adopted framework for urban expansion modeling
+    \end{itemize}
+    \item \textbf{Strengths:}Captures spatial dynamics well
+\end{itemize}
+\vspace{0.5em}
+
+
+}
+\overlaybox[Background: Evolution of Urban Growth Models]{
+
+\textbf{Limitations Identified (Vani \& Prasad, 2022)}
+\begin{itemize}
+    \item {Closed architecture:} Cannot modify or add driving factors
+    \item {Limited to bio-physical drivers:} Excludes socio-economic factors like population, income
+    \item {Computationally inefficient:} Calibration requires large CPU hours
+    \item {Assumes uniform drivers:} Same factors everywhere, ignores local context
+\end{itemize}
+
+
+}
+% --- SLIDE 5: Literature Context ---
+\overlaybox[Background: Evolution of Urban Growth Models]{
+\textbf{The Hybrid Model Solution}
+\begin{itemize}
+    \item \textbf{Emerging approach:} Combine CA with statistical and optimization methods
+    \item \textbf{Vani \& Prasad (2022):} Developed CA-MLR-GA hybrid for Vijayawada
+    \begin{itemize}
+        \item MLR: Identifies statistically significant drivers
+        \item CA: Captures neighborhood spatial dynamics
+        \item GA: Automates parameter calibration
+    \end{itemize}
+    \item \textbf{Advantages:} Flexible drivers, incorporates socio-economics, context-specific
+\end{itemize}
+\vspace{0.3em}
+
+\textit{Our study adapts and extends this hybrid framework for metropolitan-scale Hyderabad}
+}
+
+% --- SLIDE 6: Research Objectives ---
+\overlaybox[Research Objectives: What We Set Out to Achieve]{
+\textbf{Core Objectives}
+\begin{itemize}
+    \item \textbf{Identify dominant drivers} of urban expansion in Hyderabad
+    \begin{itemize}
+        \item Which factors (terrain, population, roads, etc.) most influence growth?
+    \end{itemize}
+    \item \textbf{Develop and calibrate} hybrid CA-MLR-GA model
+    \begin{itemize}
+        \item Integrate statistical analysis with spatial dynamics
+    \end{itemize}
+\end{itemize}
+}
+\overlaybox[Research Objectives: What We Set Out to Achieve]{
+\textbf{Core Objectives}
+\begin{itemize}
+    \item \textbf{Validate model accuracy} using historical data
+    \begin{itemize}
+        \item Calibration: 1990 $\rightarrow$ 2000
+        \item Validation: 2000 $\rightarrow$ 2010
+    \end{itemize}
+    \item \textbf{Predict future growth} under business-as-usual scenario
+    \begin{itemize}
+        \item Spatially explicit predictions: 2020 $\rightarrow$ 2030 $\rightarrow$ 2040 $\rightarrow$ 2050
+    \end{itemize}
+\end{itemize}
+}
+% --- SLIDE 7: Study Area ---
+\overlaybox[Study Area: Hyderabad Metropolitan Region]{
+\textbf{Geographic Location and Extent}
+\begin{itemize}
+    \item \textbf{Location:} Hyderabad, Telangana, India
+    \item \textbf{Coordinates:} 17.38°N, 78.48°E (city center)
+    \item \textbf{Study extent:} 25 km radius circle from city center
+    \item \textbf{Total area:} Approximately 1,940 km² coverage
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Spatial Resolution and Grid Specifications}
+\begin{itemize}
+    \item \textbf{Resolution:} 30 m $\times$ 30 m pixels (native Landsat resolution)
+    \item \textbf{Grid dimensions:} 1,691 $\times$ 1,691 pixels = 2,859,481 total pixels
+    \item \textbf{Coordinate system:} UTM Zone 43N (EPSG:32643)
+\end{itemize}
+\vspace{0.5em}
+
+}
+% --- SLIDE 7: Study Area ---
+\overlaybox[Study Area: Hyderabad Metropolitan Region]{
+\textbf{Temporal Coverage}
+\begin{itemize}
+    \item \textbf{Historical data:} 7 time points across 30 years
+    \begin{itemize}
+        \item 1990, 1995, 2000, 2005, 2010, 2015, 2020 (Landsat imagery)
+    \end{itemize}
+    \item \textbf{Prediction period:} 2020 $\rightarrow$ 2025 $\rightarrow$ 2030 $\rightarrow$ 2035 $\rightarrow$ 2040 $\rightarrow$ 2045 $\rightarrow$ 2050
+    \item \textbf{Total study span:} 60 years (1990–2050)
+\end{itemize}
+\vspace{0.3em}
+}
+
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.75\textwidth,height=0.75\textheight,keepaspectratio]{pic/study_buffer.png}
+   
+  \end{figure}
+\end{frame}
+% --- SLIDE 8: Hybrid Framework Architecture ---
+\overlaybox[Methodology Overview: The Three-Component System]{
+\textbf{Why a Hybrid Approach?}
+\begin{itemize}
+    \item No single method captures both drivers AND spatial dynamics adequately
+    \item Our solution: Integrate three complementary techniques
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Component 1: Multinomial Logistic Regression (MLR)}
+\begin{itemize}
+    \item \textbf{Purpose:} Identify which drivers matter and how much
+    \item \textbf{Input:} 5 driver variables (slope, elevation, population, roads, center)
+    \item \textbf{Output:} Suitability probability for each pixel
+    \item \textbf{Answers:} "Based on characteristics, how likely is this pixel to urbanize?"
+\end{itemize}
+\vspace{0.5em}
+
+
+}
+% --- SLIDE 8: Hybrid Framework Architecture ---
+\overlaybox[Methodology Overview: The Three-Component System]{
+
+\textbf{Component 2: Cellular Automata (CA)}
+\begin{itemize}
+    \item \textbf{Purpose:} Add neighborhood effects and spatial contagion
+    \item \textbf{Input:} MLR probabilities + current urban pattern
+    \item \textbf{Mechanism:} 5$\times$5 Moore kernel (distance-weighted neighbors)
+    \item \textbf{Output:} Combined probability including spatial context
+    \item \textbf{Answers:} "Are nearby pixels already urban? If yes, boost probability"
+\end{itemize}
+\vspace{0.5em}
+}
+% --- SLIDE 8: Hybrid Framework Architecture ---
+\overlaybox[Methodology Overview: The Three-Component System]{
+
+\textbf{Component 3: Genetic Algorithm (GA)}
+\begin{itemize}
+    \item \textbf{Purpose:} Automatically find optimal parameters
+    \item \textbf{Optimizes:} Neighborhood weight ($\omega$), randomness ($\alpha$), iterations
+    \item \textbf{Calibration:} Evolves parameters to maximize historical accuracy (1990$\rightarrow$2000)
+    \item \textbf{Answers:} "What parameter values produce most accurate predictions?"
+\end{itemize}
+\vspace{0.5em}
+
+}
+\overlaybox[Methodology Overview: The Three-Component System]{
+
+\textbf{Key: Quota-Based Allocation}
+\begin{itemize}
+    \item Traditional CA: All pixels with P $>$ 0.5 urbanize $\rightarrow$ \textcolor{Red}{over-prediction!}
+    \item Our approach: Calculate demand, select TOP-K highest probability pixels
+    \item Result: Correct quantity + spatial realism
+\end{itemize}
+}
+
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.75\textwidth,height=0.75\textheight,keepaspectratio]{pic/flow.jpeg}
+   
+  \end{figure}
+\end{frame}
+
+% --- SLIDE 9: Data Sources ---
+\overlaybox[Data Sources]{
+\textbf{Comprehensive Data Inventory}
+\vspace{0.8em}
+
+{\tiny
+\begin{tabular}{p{3.2cm}p{4cm}p{3.5cm}}
+\textbf{\textcolor{Maroon}{Data Type}} & \textbf{\textcolor{Maroon}{Source}} & \textbf{\textcolor{Maroon}{Specifications}} \\
+\hline
+\\[-0.6em]
+\textbf{Satellite Imagery} & Landsat (TM, ETM+, OLI, OLI-2) & 58 scenes, 30m \\[0.3em]
+
+\textbf{LULC Training} & ESA WorldCover 2020 & Training reference \\[0.3em]
+
+\textbf{Elevation} & SRTM DEM & 30m resolution \\[0.3em]
+
+\textbf{Slope} & Derived from SRTM & 30m resolution \\[0.3em]
+
+\textbf{Population} & GHS-POP 2020 & 1km resolution \\[0.3em]
+
+\textbf{Road Network} & OpenStreetMap & Vector data \\[0.3em]
+
+\textbf{City Center} & 1990 LULC & 17.38°N, 78.48°E \\[0.3em]
+
+\textbf{Exclusion} & 1990 water bodies & From LULC \\
+\end{tabular}
+}
+
+\vspace{0.8em}
+\textbf{Temporal Coverage:} 7 time points (1990, 1995, 2000, 2005, 2010, 2015, 2020)
+
+\textbf{Study Period:} 1990–2050 (60 years total)
+}
+% --- SLIDE 10: Landsat Data Extraction and Preprocessing ---
+\overlaybox[Landsat Imagery: Extraction and Preprocessing Workflow]{
+\textbf{Multi-Satellite Data Integration}
+\begin{itemize}
+    \item \textbf{Satellites used:} Landsat 5 (TM), Landsat 7 (ETM+), Landsat 8 (OLI), Landsat 9 (OLI-2)
+    \item \textbf{Path/Row:} 144/48 (consistent coverage)
+    \item \textbf{Total scenes:} 58 images across 7 years (1990, 1995, 2000, 2005, 2010, 2015, 2020)
+    \item \textbf{Platform:} Google Earth Engine for cloud processing
+\end{itemize}
+
+}
+% --- SLIDE 10: Landsat Data Extraction and Preprocessing ---
+\overlaybox[Landsat Imagery: Extraction and Preprocessing Workflow]{
+
+
+\textbf{Quality Control and Filtering}
+\begin{itemize}
+    \item \textbf{Temporal window:} December–February (dry season)
+    \item \textbf{Cloud filtering:} Maximum 15\% cloud cover threshold
+    \begin{itemize}
+        \item Achieved mean: 2.3\%, median: 0.4\%
+    \end{itemize}
+    \item \textbf{Cloud masking:} Applied QA bands to remove cloudy pixels
+    \item \textbf{Temporal compositing:} Median composite per year (reduces noise)
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Output for Classification}
+\begin{itemize}
+    \item 7 preprocessed Landsat composites (1990–2020)
+    \item Each with 10 spectral features ready for Random Forest classification
+\end{itemize}
+}
+
+% --- SLIDE 11: LULC Classification Methodology ---
+\overlaybox[LULC Classification: Random Forest Approach]{
+\textbf{Step 1: Reference Data Preparation}
+\begin{itemize}
+    \item Loaded ESA WorldCover 2020 (10m global land cover product)
+    \item Reclassified ESA 11 classes into 4 study classes:
+    \begin{itemize}
+        \item Water: ESA classes 80 (water), 90 (wetland)
+        \item Vegetation: ESA classes 10, 20, 30, 40, 95, 100 (trees, shrubs, grass, crops, mangroves, moss)
+        \item Barren: ESA classes 60, 70 (bare, snow)
+        \item Built-up: ESA class 50 (built-up)
+    \end{itemize}
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Step 2: Feature Extraction from Landsat 2020}
+\begin{itemize}
+    \item \textbf{10 spectral features:} Blue, Green, Red, NIR, SWIR1, SWIR2, NDVI, NDBI, NDWI, MNDWI
+    \item Combined Landsat features with ESA labels for training
+\end{itemize}
+\vspace{0.5em}
+
+
+}
+\overlaybox[LULC Classification: Random Forest Approach]{
+\textbf{Step 3: Training Sample Collection}
+\begin{itemize}
+    \item \textbf{Stratified sampling:} 500 points per class = 2,000 total training samples
+    \item Each sample has: Landsat features (predictors) + ESA label (ground truth)
+    \item Sampling seed: 42 (for reproducibility)
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Step 4: Random Forest Training}
+\begin{itemize}
+    \item Trained on 2,000 samples from 2020 data
+    \item \textbf{Parameters:} 100 trees, default variables per split
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Step 5: Classification of All Years}
+\begin{itemize}
+    \item Applied trained RF classifier to all 7 years (1990–2020)
+    \item \textbf{Output:} 7 LULC maps at 30m resolution
+\end{itemize}
+}
+% --- SLIDE 12: LULC Validation and Historical Growth ---
+\overlaybox[LULC Classification Validation and Accuracy]{
+\textbf{Validation Strategy}
+\begin{itemize}
+    \item \textbf{Method:} Independent validation samples (different from training)
+    \item \textbf{Sample size:} 800 points (200 per class, stratified)
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Accuracy Against ESA WorldCover 2020}
+\begin{itemize}
+    \item \textbf{Overall Accuracy:} 76.38\%
+    \item \textbf{Kappa Coefficient:} 0.685 (substantial agreement)
+\end{itemize}
+\vspace{0.3em}
+
+{\small
+\textbf{Per-Class Accuracy Metrics}
+\vspace{0.3em}
+
+\begin{tabular}{lccc}
+\textbf{Class} & \textbf{Producer's} & \textbf{User's} & \textbf{F1-Score} \\
+\hline
+Water & 91.50\% & 89.27\% & 90.37\% \\
+Vegetation & 85.00\% & 76.58\% & 80.57\% \\
+Barren & 61.00\% & 62.56\% & 61.77\% \\
+Built-up & 68.00\% & 76.40\% & 71.96\% \\
+\end{tabular}
+}
+
+}
+
+% --- SLIDE 12: LULC Validation and Historical Growth ---
+\overlaybox[LULC Classification Validation and Accuracy]{
+
+\vspace{0.5em}
+\textbf{Cross-Validation Against ESA 2021}
+\begin{itemize}
+    \item \textbf{Overall Accuracy:} 80.12\% (improved performance)
+    \item \textbf{Kappa Coefficient:} 0.735
+    \item Demonstrates temporal consistency of classifier
+\end{itemize}
+
+\vspace{0.5em}
+\textbf{Historical Built-up Growth Analysis (1990–2020)}
+\begin{itemize}
+    \item 1990 baseline: 113.72 km² (5.86\% of study area)
+    \item 2020 current: 471.42 km² (24.30\% of study area)
+    \item Net growth: +357.71 km² (+314.6\% increase)
+\end{itemize}
+}
+% --- SLIDE 13: Historical LULC Evolution (1990-2020) ---
+\begin{frame}
+\frametitle{Historical LULC Evolution: 1990–2020}
+\begin{figure}
+    \centering
+    \begin{tabular}{cc}
+        \includegraphics[width=0.45\textwidth,height=0.35\textheight,keepaspectratio]{pic/1990.png} &
+        \includegraphics[width=0.45\textwidth,height=0.35\textheight,keepaspectratio]{pic/2000.png} \\
+        \textbf{1990: 113.72 km² built-up} & \textbf{2000: 182.42 km² built-up} \\[0.5em]
+        \includegraphics[width=0.45\textwidth,height=0.35\textheight,keepaspectratio]{pic/2010.png} &
+        \includegraphics[width=0.45\textwidth,height=0.35\textheight,keepaspectratio]{pic/2020.png} \\
+        \textbf{2010: 361.52 km² built-up} & \textbf{2020: 471.42 km² built-up} \\
+    \end{tabular}
+    \caption{30-year urban expansion: 113.72 km² → 471.42 km² (+314.6\%)}
+\end{figure}
+
+\end{frame}
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.75\textwidth,height=0.75\textheight,keepaspectratio]{pic/lulc_conf.png}
+   
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.75\textwidth,height=0.75\textheight,keepaspectratio]{pic/lulc_line.png}
+   
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.75\textwidth,height=0.75\textheight,keepaspectratio]{pic/urban_line.png}
+   
+  \end{figure}
+\end{frame}
+% --- SLIDE 14: Driver Extraction - Slope ---
+\overlaybox[Driver 1: Slope (Terrain Constraint)]{
+
+\begin{itemize}
+    \item \textbf{Source:} SRTM DEM (Shuttle Radar Topography Mission)
+    \item \textbf{Resolution:} 30m × 30m
+    \item \textbf{Calculation:} Derived from elevation using terrain analysis
+    \item \textbf{Unit:} Percent rise (tan(degrees) × 100)
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Statistics}
+\begin{itemize}
+    \item Mean: 5.28\% (gentle terrain overall)
+    \item Standard deviation: 3.93\%
+    \item Range: 0\% (flat) to 81.85\% (steep)
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Standardization}
+\begin{itemize}
+    \item Applied Z-score normalization: $Z = (X - \mu) / \sigma$
+    \item Mean $\approx$ 0, Standard deviation $\approx$ 1
+    \item Removes scale differences for MLR modeling
+\end{itemize}
+\vspace{0.5em}
+
+}
+% --- SLIDE 14: Driver Extraction - Slope ---
+\overlaybox[Driver 1: Slope (Terrain Constraint)]{
+\textbf{Expected Role in Urban Growth}
+\begin{itemize}
+    \item Higher slope → constraint on development (harder to build)
+    \item Flatter areas → more suitable for urbanization
+\end{itemize}
+}
+
+% --- SLIDE 15: Driver 2 - Elevation ---
+\overlaybox[Driver 2: Elevation (Topographic Factor)]{
+\textbf{Data Source and Processing}
+\begin{itemize}
+    \item \textbf{Source:} SRTM DEM (30m resolution)
+    \item \textbf{Unit:} Meters above sea level
+    \item \textbf{Processing:} Direct extraction from DEM, clipped to study area
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Statistics}
+\begin{itemize}
+    \item Mean: 547.96 meters
+    \item Standard deviation: 41.20 meters
+    \item Range: 421m (low-lying) to 650m (elevated areas)
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Standardization}
+\begin{itemize}
+    \item Standardized for MLR compatibility with other drivers
+\end{itemize}
+\vspace{0.5em}
+
+}
+% --- SLIDE 15: Driver 2 - Elevation ---
+\overlaybox[Driver 2: Elevation (Topographic Factor)]{
+
+
+\textbf{Expected Role in Urban Growth}
+\begin{itemize}
+    \item Mixed effect: moderate elevation may be preferred
+    \item Very low areas: flood risk, poor drainage
+    \item Very high areas: infrastructure cost, accessibility challenges
+\end{itemize}
+}
+
+% --- SLIDE 16: Driver 3 - Population Density ---
+\overlaybox[Driver 3: Population Density (Demand Pressure)]{
+\textbf{Data Source and Processing}
+\begin{itemize}
+    \item \textbf{Source:} GHS-POP 2020 (Global Human Settlement Population)
+    \item \textbf{Original resolution:} 100m × 100m
+    \item \textbf{Resampled to:} 30m using bilinear interpolation
+    \item \textbf{Note:} Changed from census interpolation after mid-evaluation feedback
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Statistics (2020 data used for modeling)}
+\begin{itemize}
+    \item Mean density: 49.60 persons/pixel (at 100m scale)
+    \item Standard deviation: 94.06
+    \item Range: 0 (unpopulated) to 1,008.37 persons/pixel
+\end{itemize}
+\vspace{0.5em}
+
+
+}
+% --- SLIDE 16: Driver 3 - Population Density ---
+\overlaybox[Driver 3: Population Density (Demand Pressure)]{
+
+\textbf{Population Growth (1990–2024)}
+\begin{itemize}
+    \item 1990: 5.49 million
+    \item 2024: 10.09 million
+    \item Growth: +83.7\% (+1.81\% annual rate)
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Standardization}
+\begin{itemize}
+    \item Applied Z-score normalization.
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Expected Role in Urban Growth}
+\begin{itemize}
+    \item Higher population density → stronger demand for urban development
+    \item Key socio-economic driver (demand side, unlike terrain constraints)
+\end{itemize}
+}
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.95\textwidth,height=0.95\textheight,keepaspectratio]{pic/pop_line.png}
+   
+  \end{figure}
+\end{frame}
+
+% --- SLIDE 17: Driver 4 - Distance to Roads ---
+\overlaybox[Driver 4: Distance to Roads (Accessibility)]{
+\textbf{Data Source and Processing}
+\begin{itemize}
+    \item \textbf{Source:} OpenStreetMap via Overpass API
+    \item \textbf{Road types:} Motorway, trunk, primary, secondary, tertiary
+    \item \textbf{Extracted:} 9,921 road segments within 25km circle
+    \item \textbf{Total length:} 4,259.95 km
+    \item \textbf{Method:} Rasterized roads → Euclidean distance transform
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Statistics}
+\begin{itemize}
+    \item Mean distance: 497.60 m (0.50 km)
+    \item Standard deviation: 550.95 m
+    \item Range: 0 m (on road) to 4,310 m (4.31 km, most remote)
+    \item Road coverage: 7.16\% of study area
+\end{itemize}
+\vspace{0.5em}
+
+}
+
+% --- SLIDE 17: Driver 4 - Distance to Roads ---
+\overlaybox[Driver 4: Distance to Roads (Accessibility)]{
+\textbf{Standardization}
+\begin{itemize}
+    \item Applied Z-score normalization
+    \item Z-score range: -0.90 to 6.92
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Expected Role in Urban Growth}
+\begin{itemize}
+    \item Closer to roads → higher accessibility → more development
+    \item Expected negative coefficient in MLR (distance inversely related to urban)
+    \item Infrastructure-driven growth: urban follows transportation networks
+\end{itemize}
+}
+
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.75\textwidth,height=0.75\textheight,keepaspectratio]{pic/raw_road.png}
+   
+  \end{figure}
+\end{frame}
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.75\textwidth,height=0.75\textheight,keepaspectratio]{pic/distance_road.png}
+   
+  \end{figure}
+\end{frame}
+
+% --- SLIDE 18: Exclusion Layer - Water Bodies ---
+\overlaybox[Exclusion Layer: Water Bodies Constraint]{
+\textbf{Data Source and Processing}
+\begin{itemize}
+    \item \textbf{Source:} 1990 LULC classification (Class 1 = Water)
+    \item \textbf{Purpose:} Prevent unrealistic urban predictions on permanent water bodies
+    \item \textbf{Type:} Binary constraint (1 = excluded, 0 = developable)
+    \item \textbf{Rationale:} 1990 water bodies assumed permanent for modeling period
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Role in CA Model}
+\begin{itemize}
+    \item Cells with exclusion = 1 cannot become urban
+    \item Applied during allocation phase to filter out water pixels
+    \item Ensures spatially realistic predictions
+\end{itemize}
+}
+% --- SLIDE 19: Driver 5 - Distance to City Center ---
+\overlaybox[Driver 5: Distance to City Center (Centrality)]{
+\textbf{Data Source and Processing}
+\begin{itemize}
+    \item \textbf{Method:} Euclidean distance from each pixel to center point
+    \item \textbf{Coordinate system:} UTM Zone 43N (metric distances)
+    \item \textbf{Formula:} $d = \sqrt{(x - x_{center})^2 + (y - y_{center})^2}$
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Statistics (Raw Distance)}
+\begin{itemize}
+    \item Range: 0 m (at center) to study area boundary
+    \item Radial pattern: all pixels within 25 km radius circle
+\end{itemize}
+\vspace{0.5em}
+
+}
+% --- SLIDE 19: Driver 5 - Distance to City Center ---
+\overlaybox[Driver 5: Distance to City Center (Centrality)]{
+\textbf{Standardization (Z-scores)}
+\begin{itemize}
+    \item Applied Z-score normalization.
+    \item Standardized range: -2.684 to 2.285
+    \item Mean: 0.000, Standard deviation: 1.000
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Expected Role in Urban Growth}
+\begin{itemize}
+    \item Classical urban economics: growth radiates from center
+    \item Closer to center → higher land value → more development pressure
+    \item May be weaker in polycentric metros like Hyderabad (IT hubs in suburbs)
+\end{itemize}
+}
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.95\textwidth,height=0.95\textheight,keepaspectratio]{pic/drivers.png}
+   
+  \end{figure}
+\end{frame}
+
+
+% --- SLIDE 20: VIF Testing - Multicollinearity Analysis ---
+\overlaybox[VIF Testing: Driver Independence Validation]{
+\begin{itemize}
+    \item \textbf{Purpose:} Test if drivers are independent (avoid redundancy in MLR)
+    \item \textbf{Method:} Variance Inflation Factor (VIF) analysis
+    \item \textbf{Sample:} 4,126 stratified points from 2020 LULC
+    \begin{itemize}
+        \item Stage 1: 4,000 LULC-balanced samples (1,000 per class)
+        \item Stage 2: 126 steep terrain samples (ensure terrain variation)
+    \end{itemize}
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{VIF Results}
+
+{\small
+\begin{tabular}{lcc}
+\textbf{Driver} & \textbf{VIF} & \textbf{Status} \\
+\hline
+% FIX: Replaced all ✅ with \checkmark (requires \usepackage{amssymb})
+Population & 1.137 & \checkmark\ Pass \\
+Distance to roads & 1.113 & \checkmark\ Pass \\
+Distance to center & 1.081 & \checkmark\ Pass \\
+Elevation & 1.028 & \checkmark\ Pass \\
+Slope & 1.010 & \checkmark\ Pass \\
+\hline
+\textbf{Range} & \textbf{1.01--1.14} & \textbf{All Pass} \\ % FIX: Used en-dash -- for range
+\end{tabular}
+}
+
+}
+
+\overlaybox[VIF Testing: Driver Independence Validation]{
+\textbf{VIF Mathematical Formula}
+\[
+\text{VIF}_i = \frac{1}{1 - R^2_i}
+\]
+
+Where $R^2_i$ is obtained by regressing driver $i$ against all other drivers.
+
+\textbf{Interpretation:}
+\begin{itemize}
+    \item $R^2 = 0 \Rightarrow \text{VIF} = 1$ (no correlation, perfect independence)
+    \item $R^2 = 0.75 \Rightarrow \text{VIF} = 4$ (75\% variance explained, threshold)
+    \item $R^2 = 0.90 \Rightarrow \text{VIF} = 10$ (90\% variance explained, problematic)
+\end{itemize}}
+
+\overlaybox[VIF Testing: Driver Independence Validation]{
+
+\textbf{What These Numbers Mean}
+\begin{itemize}
+    \item \textbf{VIF = 1:} No correlation with other drivers (perfect independence)
+    \item \textbf{VIF $<$ 4:} Acceptable (paper's threshold)
+    \item \textbf{VIF $<$ 5:} Generally acceptable
+    \item \textbf{VIF $>$ 10:} Problematic multicollinearity (must address)
+\end{itemize}
+\vspace{0.3em}
+
+\textbf{Interpretation}
+\begin{itemize}
+    % FIX: Changed color from 'red' to 'blue'
+    \item All VIF values $<$ 1.14 $\rightarrow$ Good! No multicollinearity detected
+    \item Drivers are statistically independent $\rightarrow$ safe for MLR
+    \item Matches paper's requirement (Vijayawada: 1.03--2.78)
+\end{itemize}}
+
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.75\textwidth,height=0.75\textheight,keepaspectratio]{pic/pearson_vif.png}
+   
+  \end{figure}
+\end{frame}
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.75\textwidth,height=0.75\textheight,keepaspectratio]{pic/vif_bar.png}
+   
+  \end{figure}
+\end{frame}
+
+% --- SLIDE 21: MLR Analysis - Identifying Dominant Drivers ---
+\overlaybox[Multinomial Logistic Regression: Driver Analysis]{
+\textbf{What We Did}
+\begin{itemize}
+    \item \textbf{Purpose:} Identify which drivers most influence urban growth
+    \item \textbf{Method:} Multinomial Logistic Regression (MLR)
+    \item \textbf{Training data:} 4,126 stratified samples from 2020 LULC
+    \item \textbf{Target:} Predict LULC class based on 5 driver variables
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Model Performance}
+\begin{itemize}
+    \item \textbf{Pseudo R$^2$:} 0.226 (exceeds paper's threshold of 0.2 \checkmark)
+    \item \textbf{Built-up class accuracy:} 70.35\% (strong prediction for urban)
+\end{itemize}
+
+
+}
+% --- SLIDE 21: MLR Analysis - Identifying Dominant Drivers ---
+\overlaybox[Multinomial Logistic Regression: Driver Analysis]{
+
+\textbf{MLR Mathematical Formulation (Softmax)}
+
+For each LULC class $k$, probability is:
+\[
+P(Y = k | X) = \frac{\exp(\beta_{k0} + \beta_{k1}X_1 + ... + \beta_{k5}X_5)}{\sum_{j=1}^{4} \exp(\beta_{j0} + \beta_{j1}X_1 + ... + \beta_{j5}X_5)}
+\]
+
+Where:
+\begin{itemize}
+    \item $X_1, ..., X_5$ = driver variables (slope, elevation, population, distance to roads, distance to center)
+    \item $\beta_{kp}$ = coefficient for driver $p$ in class $k$ (learned from data)
+    \item Denominator ensures probabilities sum to 1 across all 4 classes
+\end{itemize}
+
+}
+% --- SLIDE 21: MLR Analysis - Identifying Dominant Drivers ---
+\overlaybox[Multinomial Logistic Regression: Driver Analysis]{
+
+\textbf{Model Fit: McFadden's Pseudo R²}
+\[
+\text{Pseudo } R^2 = 1 - \frac{LL_{\text{model}}}{LL_{\text{null}}}
+\]
+\begin{itemize}
+    \item $LL_{\text{model}}$ = log-likelihood of fitted model
+    \item $LL_{\text{null}}$ = log-likelihood of null model (intercept only)
+    \item Analogous to R² in linear regression (0 = no improvement, 1 = perfect)
+\end{itemize}
+\vspace{0.3em}
+}
+% --- SLIDE 21: MLR Analysis - Identifying Dominant Drivers ---
+\overlaybox[Multinomial Logistic Regression: Driver Analysis]{
+
+\textbf{Key Findings: Drivers of Urban Growth ($\rightarrow$ Built-up)}
+{\small
+\begin{tabular}{lcl}
+\textbf{Driver} & \textbf{Coefficient} & \textbf{Interpretation} \\
+\hline
+
+\textbf{Population} & \textcolor{yellow}{+1.71} & $\star\star\star$ Higher density $\rightarrow$ MORE urban \\
+\textbf{Dist. to roads} & \textcolor{yellow}{-0.59} & $\star\star\star$ Closer to roads $\rightarrow$ MORE urban \\
+% FIX: Replaced → with $\rightarrow$
+Dist. to center & -0.20 & Closer to center $\rightarrow$ slightly more urban \\
+Elevation & +0.06 & Weak positive effect \\
+Slope & +0.05 & Weak positive effect \\
+\end{tabular}
+}
+
+\vspace{0.5em}
+\textbf{Dominant Drivers Identified}
+\begin{itemize}
+    % FIX: Changed 'red' to 'yellow', replaced β with $\beta$
+    \item \textcolor{yellow}{\textbf{Population density}} ($\beta$ = +1.71): Strongest driver --- demand-side factor
+    \item \textcolor{yellow}{\textbf{Distance to roads}} ($\beta$ = -0.59): Infrastructure accessibility drives growth
+    \item Both findings consistent with paper's results from Vijayawada
+\end{itemize}
+}
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.95\textwidth,height=0.95\textheight,keepaspectratio]{pic/ml_heatmap.png}
+   
+  \end{figure}
+\end{frame}
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.75\textwidth,height=0.75\textheight,keepaspectratio]{pic/mlr_comparison.png}
+   
+  \end{figure}
+\end{frame}
+
+
+% --- SLIDE 22: MLR Probability Surface Generation ---
+\overlaybox[From MLR Coefficients to Spatial Suitability Map]{
+\textbf{Process: Converting MLR to Spatial Probabilities}
+
+\begin{enumerate}
+    \item \textbf{Prepare spatial drivers:} Stack all 5 driver arrays (1,691×1,691 pixels)
+    \item \textbf{Flatten to table:} Reshape to 2,859,481 rows × 5 columns (one row per pixel)
+    \item \textbf{Apply MLR model:} Calculate probability for each pixel using trained coefficients
+    \item \textbf{Extract built-up probability:} Select Class 4 (urban) probability column
+    \item \textbf{Reshape to grid:} Convert back to 1,691×1,691 spatial surface
+\end{enumerate}
+
+}
+
+% --- SLIDE 22: MLR Probability Surface Generation ---
+\overlaybox[From MLR Coefficients to Spatial Suitability Map]{
+\textbf{Process: Converting MLR to Spatial Probabilities}
+
+\textbf{Formula Applied to Each Pixel:}
+\[
+P(\text{Urban}) = \frac{\exp(\beta_0 + \beta_1 \cdot \text{slope} + \beta_2 \cdot \text{elev} + ... + \beta_5 \cdot \text{dist\_center})}{\sum_{k=1}^{4} \exp(\text{linear combination for class } k)}
+\]
+
+\textbf{Output: MLR Suitability Surface}
+\begin{itemize}
+    \item Range: 0 (not suitable) to 1 (highly suitable for urbanization)
+    \item \textbf{Purpose:} Base layer for CA model (driver-based component)
+    \item Combined with neighborhood effects in CA to produce final probabilities
+\end{itemize}
+}
+
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.75\textwidth,height=0.75\textheight,keepaspectratio]{pic/mlr_prob_surface.png}
+   
+  \end{figure}
+\end{frame}
+
+% --- SLIDE 23: Neighborhood Analysis - Moore Kernel ---
+\overlaybox[Neighborhood Effect: 5×5 Moore Kernel]{
+\textbf{What We Did}
+\begin{itemize}
+    \item \textbf{Purpose:} Capture spatial contagion (urban grows near existing urban)
+    \item \textbf{Method:} Created 5×5 Moore neighborhood kernel
+    \item \textbf{Weighting:} Inverse distance ($w = 1/d$) — closer neighbors have more influence
+    \item \textbf{Normalization:} Scaled weights to sum to 1.0
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{What We Got: Distance-Weighted Kernel}
+
+{\tiny
+\begin{tabular}{ccccc}
+2.56 & 3.24 & 3.62 & 3.24 & 2.56 \\
+3.24 & 5.12 & 7.24 & 5.12 & 3.24 \\
+3.62 & 7.24 & \textbf{[X]} & 7.24 & 3.62 \\
+3.24 & 5.12 & 7.24 & 5.12 & 3.24 \\
+2.56 & 3.24 & 3.62 & 3.24 & 2.56 \\
+\end{tabular}
+\hspace{0.3cm}
+{\scriptsize (Values ×100)}
+}
+}
+% --- SLIDE 23: Neighborhood Analysis - Moore Kernel ---
+\overlaybox[Neighborhood Effect: 5×5 Moore Kernel]{
+\textbf{Mathematical Formulation}
+
+\textbf{Step 1: Calculate Euclidean distance from center}
+\[
+d_{ij} = \sqrt{(i - c)^2 + (j - c)^2}
+\]
+Where $c = 2$ (center of 5×5 grid), $i, j \in \{0, 1, 2, 3, 4\}$
+
+\textbf{Step 2: Apply inverse distance weighting}
+\[
+w_{ij} = \begin{cases} 
+\frac{1}{d_{ij}} & \text{if } d_{ij} > 0 \\
+0 & \text{if } d_{ij} = 0 \text{ (center pixel)}
+\end{cases}
+\]
+
+\textbf{Step 3: Normalize weights to sum to 1}
+\[
+w_{ij}^{\text{norm}} = \frac{w_{ij}}{\sum_{i,j} w_{ij}}
+\]
+
+}
+% --- SLIDE 23: Neighborhood Analysis - Moore Kernel ---
+\overlaybox[Neighborhood Effect: 5×5 Moore Kernel]{
+\textbf{What These Numbers Mean}
+\begin{itemize}
+    \item \textbf{[X]} = Center pixel being evaluated
+    \item \textbf{7.24:} Adjacent pixels (up/down/left/right) — strongest influence
+    \item \textbf{5.12:} Diagonal neighbors — medium influence
+    \item \textbf{3.62, 3.24, 2.56:} Outer pixels — decreasing influence with distance
+    \item \textbf{Sum = 1.0:} Normalized weights (probabilities)
+\end{itemize}
+
+}
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.95\textwidth,height=0.95\textheight,keepaspectratio]{pic/moore_kernel.png}
+   
+  \end{figure}
+\end{frame}
+% --- SLIDE 22: Genetic Algorithm - Parameter Optimization ---
+\overlaybox[Genetic Algorithm: Parameter Optimization]{
+\textbf{What We Did}
+\begin{itemize}
+    \item Set up Genetic Algorithm framework for parameter optimization
+    \item Defined CA simulation functions and fitness metric (RMSE-based)
+    \item Ran simplified GA: 20 individuals, 30 generations
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{What We Got}
+\begin{itemize}
+    % FIX: Replaced ω with $\omega$
+    \item \textbf{$\omega$:} 1.200 
+    % FIX: Replaced α with $\alpha$
+    \item \textbf{$\alpha$:} 0.050
+    \item \textbf{Iterations:} 10 per decade
+\end{itemize}
+}
+% --- SLIDE 22: Genetic Algorithm - Parameter Optimization ---
+\overlaybox[Genetic Algorithm: Parameter Optimization]{
+\textbf{What This means}
+\begin{itemize}
+    % FIX: Replaced ω with $\omega$
+    \item \textbf{$\omega$ = 1.20:} Moderate neighborhood influence (balanced with drivers)
+    % FIX: Replaced α with $\alpha$
+    \item \textbf{$\alpha$ = 0.05:} Moderate randomness (5\% stochastic variation)
+    \item \textbf{10 iterations:} Annual time steps for decadal predictions
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{What We Did NOT Do}
+\begin{itemize}
+    % FIX: Replaced ❌ with $\times$
+    \item $\times$ Full-scale GA optimization (used simplified version)
+    \item Parameters are preliminary.
+\end{itemize}
+}
+
+% --- SLIDE 25: CA Model Calibration & Validation ---
+\overlaybox[CA Model: Calibration and Validation Results]{
+\textbf{What We Did}
+\begin{itemize}
+    \item Implemented CA simulation using optimized parameters ($\omega$=1.200, $\alpha$=0.050)
+    \item \textbf{Calibration:} 1990 → 2000 (train model to match historical growth)
+    \item \textbf{Validation:} 2000 → 2010 (test model on independent period)
+    \item Sample-based approach: 4,126 stratified points (not full raster)
+\end{itemize}
+
+}
+\overlaybox[CA Model: Calibration and Validation Results]{
+
+\textbf{CA Transition Formula (From Code)}
+\[
+P_{\text{final}} = P_{\text{MLR}} \times (1 + \omega \times P_{\text{neighborhood}}) + \text{random}[-\alpha, \alpha]
+\]
+\begin{itemize}
+    \item $P_{\text{MLR}}$ = suitability from drivers (0 to 1)
+    \item $P_{\text{neighborhood}}$ = weighted density of urban neighbors (Moore kernel)
+    \item $\omega = 1.200$ = neighborhood weight (multiplier effect)
+    \item $\text{random}[-\alpha, \alpha]$ = stochastic component ($\alpha = 0.050$)
+    \item Transition occurs if $P_{\text{final}} > 0.5$
+\end{itemize}
+
+
+}
+% --- SLIDE 25: CA Model Calibration & Validation ---
+\overlaybox[CA Model: Calibration and Validation Results]{
+\textbf{What We Got}
+
+{\small
+% --- FIX: Replaced 'tabular' with 'tabularx' ---
+% This makes the table fit the width of the slide and wraps long text.
+% 'l' = left-aligned column
+% '>{\centering\arraybackslash}X' = a text-wrapping, centered column
+\begin{tabularx}{\textwidth}{ l >{\centering\arraybackslash}X >{\centering\arraybackslash}X }
+\textbf{Metric} & 
+    % FIX: Replaced → with $\rightarrow$
+    \textbf{Calibration (1990$\rightarrow$2000)} & 
+    \textbf{Validation (2000$\rightarrow$2010)} \\
+\hline
+Overall Accuracy & 93.65\% & 93.43\% \\
+
+% FIX: Replaced κ with $\kappa$
+Kappa Coefficient & 0.915 & 0.912 \\
+\hline
+\end{tabularx}
+}
+
+\textbf{Interpretation}
+\begin{itemize}
+    % FIX: Replaced > with $>$ and κ with $\kappa$
+    \item Excellent accuracy ($>$90\%) and substantial agreement ($\kappa >$ 0.9)
+    \item Consistent performance between calibration and validation
+    \item Model successfully captures historical urban growth patterns
+\end{itemize}
+}
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.95\textwidth,height=0.95\textheight,keepaspectratio]{pic/ca_panel.png}
+   
+  \end{figure}
+\end{frame}
+
+
+% --- SLIDE 26: Future Predictions - Setup & Methodology ---
+\overlaybox[Future Urban Growth Predictions: Setup]{
+\textbf{What We Did - Part 1: Spatial Data Preparation}
+\begin{itemize}
+    \item \textbf{Full spatial resolution:} 1,691×1,691 pixels at 30m (2,859,481 total pixels)
+    \item \textbf{Study area:} 2,181,644 pixels inside 25km circle (76.3\% coverage)
+    \item \textbf{Baseline:} 2020 LULC (507,507 built-up pixels = 456.76 km²)
+    \item \textbf{Applied calibrated parameters:} $\omega$=1.200, $\alpha$=0.050
+    \item \textbf{All 5 drivers loaded:} Slope, elevation, population (2020), distance to roads, distance to center
+\end{itemize}
+\vspace{0.5em}
+
+\textbf{Exclusion Constraints Applied}
+
+}
+% --- SLIDE 26: Future Predictions - Setup & Methodology ---
+\overlaybox[Future Urban Growth Predictions: Setup]{
+
+
+\textbf{Prediction Strategy}
+\begin{itemize}
+    \item \textbf{Prediction years:} 2025, 2030, 2035, 2040, 2045, 2050
+    \item \textbf{Method:} Quota-based allocation (not threshold-based)
+    \begin{itemize}
+        \item Calculate urban demand based on historical growth
+        \item Select TOP-K highest probability pixels per iteration
+        \item Ensures realistic growth quantity + spatial patterns
+    \end{itemize}
+    \item \textbf{Iterations:} Annual time steps (e.g., 10 iterations for 2020→2030)
+\end{itemize}
+}
+% --- SLIDE 27: Future Predictions - Demand Calculation ---
+\overlaybox[Future Urban Growth Predictions: Demand Calculation]{
+\textbf{Urban Demand Formula}
+
+Historical growth rate from 2010–2020 trend:
+\[
+r = 0.0267 \text{ (2.67\% annual growth)}
+\]
+
+Exponential growth projection:
+\[
+\text{Urban}_{\text{target year}} = \text{Urban}_{\text{2020}} \times (1 + r)^{t}
+\]
+
+New pixels needed:
+\[
+\text{Demand} = \text{Urban}_{\text{target}} - \text{Urban}_{\text{2020}}
+\]
+
+Where $t$ = years elapsed from 2020
+
+}
+
+% --- SLIDE 27: Future Predictions - Demand Calculation ---
+\overlaybox[Future Urban Growth Predictions: Demand Calculation]{
+
+\textbf{Quota-Based Allocation Process}
+\begin{enumerate}
+    \item Calculate total demand for target year using exponential formula
+    \item Divide demand equally across iterations: $\text{quota}_{\text{iter}} = \text{Demand} / t$
+    \item \textbf{Each iteration:}
+    \begin{itemize}
+        \item Calculate $P_{\text{MLR}}$ for all pixels (driver-based suitability)
+        \item Calculate $P_{\text{neighborhood}}$ using Moore kernel (spatial contagion)
+        \item Combine: $P_{\text{final}} = P_{\text{MLR}} \times (1 + \omega \times P_{\text{neighborhood}}) + \text{random}[-\alpha, \alpha]$
+        \item Filter: Keep only non-urban, non-excluded, inside-circle pixels
+        \item Select: TOP $\text{quota}_{\text{iter}}$ pixels by probability
+        \item Convert: Selected pixels become urban (Class 4)
+    \end{itemize}
+\end{enumerate}
+
+}
+% --- SLIDE 27: Future Predictions - Demand Calculation ---
+\overlaybox[Future Urban Growth Predictions: Demand Calculation]{
+
+\textbf{Quota-Based Allocation Process}
+\begin{enumerate}
+    
+    \item Update LULC state and repeat for next iteration
+\end{enumerate}
+\vspace{0.3em}
+
+\textbf{Why Quota-Based?}
+\begin{itemize}
+    \item Ensures predicted quantity matches historical growth rate
+    \item Avoids over/under-prediction from fixed probability thresholds
+    \item Spatially realistic: highest suitability pixels urbanize first
+\end{itemize}
+}
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.95\textwidth,height=0.95\textheight,keepaspectratio]{pic/lulc_spatial_evolution.png}
+   
+  \end{figure}
+\end{frame}
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.95\textwidth,height=0.95\textheight,keepaspectratio]{pic/lulc_change_detection.png}
+   
+  \end{figure}
+\end{frame}
+\begin{frame}
+  
+  \begin{figure}
+    \centering
+\includegraphics[width=0.95\textwidth,height=0.95\textheight,keepaspectratio]{pic/lulc_area_analysis.png}
+   
+  \end{figure}
+\end{frame}
+% --- SLIDE 28: Prediction Results - Built-up Growth ---
+\overlaybox[Prediction Results: Urban Growth (2020–2050)]{
+\textbf{Built-up Area Projections}
+
+% --- START TABLE FIX ---
+{
+% FIX 1: Make font smaller
+\footnotesize
+% FIX 2: Reduce space between columns
+\setlength{\tabcolsep}{4pt} 
+
+% FIX 3: Manually break long headers with nested tables
+\begin{tabular}{lcccc}
+\textbf{Year} & 
+    \textbf{\begin{tabular}[c]{@{}c@{}}Built-up\\(km$^2$)\end{tabular}} & 
+    \textbf{\begin{tabular}[c]{@{}c@{}}Growth from 2020\\(km$^2$)\end{tabular}} & 
+    \textbf{\begin{tabular}[c]{@{}c@{}}Growth\\(\%)\end{tabular}} & 
+    \textbf{\begin{tabular}[c]{@{}c@{}}Period\\Growth\end{tabular}} \\
+\hline
+% FIX 4: Replaced — with --- and % with \%
+2020 (baseline) & 456.76 & --- & --- & --- \\
+2025 & 521.07 & +64.32 & +14.1\% & 14.1\% \\
+2030 & 594.46 & +137.70 & +30.1\% & 14.1\% \\
+2035 & 678.16 & +221.40 & +48.5\% & 14.1\% \\
+2040 & 773.66 & +316.90 & +69.4\% & 14.1\% \\
+2045 & 882.61 & +425.85 & +93.2\% & 14.1\% \\
+\textbf{2050} & \textbf{1,006.91} & \textbf{+550.15} & \textbf{+120.4\%} & \textbf{14.1\%} \\
+\end{tabular}
+}
+% --- END TABLE FIX ---
+
+}
+% --- SLIDE 28: Prediction Results - Built-up Growth ---
+\overlaybox[Prediction Results: Urban Growth (2020–2050)]{
+\textbf{Key Findings}
+\begin{itemize}
+    \item \textbf{Urban area more than doubles:} 456.76 km² → 1,006.91 km² (2020–2050)
+    \item \textbf{Net new urban:} 550.15 km² over 30 years
+    \item \textbf{Consistent growth:} 14.1\% every 5-year period (compound effect)
+    \item \textbf{Annual growth rate:} 2.67\% (matches historical 2010–2020 trend)
+\end{itemize}
+
+\vspace{0.5em}
+\textbf{Spatial Pattern}
+\begin{itemize}
+    \item Growth radiates outward from 2020 urban core
+    \item Follows road networks and high population density areas
+    \item Avoids water bodies (107,453 pixels excluded)
+    \item Concentrated within 25km study circle
+\end{itemize}
+}
+% --- SLIDE 29: Complete LULC Composition Change ---
+\overlaybox[Complete LULC Change: All Classes (2020–2050)]{
+
+\vspace{0.5em}
+\textbf{Land Use Transitions (2020→2050)}
+\begin{itemize}
+    \item \textbf{Urban expansion sources:}
+    \begin{itemize}
+        \item Barren land: -266.52 km² (primary source, 48.4\% of new urban)
+        \item Vegetation: -274.84 km² (secondary source, 50.0\% of new urban)
+        \item Water: -8.79 km² (minimal, 1.6\%)
+    \end{itemize}
+    \item \textbf{Net effect:} 550.15 km² converted to built-up
+\end{itemize}
+
+}% --- SLIDE 29: Complete LULC Composition Change ---
+\overlaybox[Complete LULC Change: All Classes (2020–2050)]{
+
+\textbf{Implications}
+\begin{itemize}
+    \item \textcolor{red}{\textbf{Vegetation loss:}} 26.1\% decline threatens green cover
+    \item \textcolor{red}{\textbf{Barren depletion:}} 64.9\% decline limits future expansion buffer
+    \item \textbf{Urban dominance:} Built-up becomes largest land use by 2050 (50.0\% of study area)
+    \item Water bodies relatively stable (slight decline from peripheral encroachment)
+\end{itemize}
+}
+
+% --- SLIDE 30: Limitations and Challenges ---
+\overlaybox[Challenges so Far]{
+\textbf{1. Spatial Data Reprojection Issues}
+\begin{itemize}
+    \item \textbf{Challenge:} GeoTIFF exports (1,663×1,660) vs. roads array (1,691×1,691)
+    \item \textbf{Solution:} Resampled all drivers to consistent 1,691×1,691 grid
+    \item \textbf{Impact:} Built-up baseline discrepancy:
+    \begin{itemize}
+        \item Original 2020 LULC: 471.42 km² (pre-resampling)
+        \item Resampled 2020 LULC: 456.76 km² (used in predictions)
+        \item Difference: -14.66 km² (-3.1\%) due to resampling artifacts
+    \end{itemize}
+    \item \textbf{Implication:} Minor quantitative shift, but spatial patterns preserved
+\end{itemize}
+
+
+}
+
+% --- SLIDE 30: Limitations and Challenges ---
+\overlaybox[Study Limitations and Methodological Challenges]{
+
+\textbf{2. Simplified GA Optimization}
+\begin{itemize}
+    \item \textbf{Limitation:} Full-resolution GA calibration not completed
+    \item \textbf{What we did:} Used surrogate fitness function (simplified demo)
+    \begin{itemize}
+        \item 20 individuals instead of 50
+        \item 30 generations instead of 100
+        \item Sample-based evaluation instead of full raster simulation
+    \end{itemize}
+    \item \textbf{Implication:} Parameters ($\omega$=1.200, $\alpha$=0.050) are preliminary, not rigorously optimized
+    \item \textbf{Impact:} May not represent true optimal values; could affect prediction accuracy
+\end{itemize}
+
+}
+% --- SLIDE 30: Limitations and Challenges ---
+\overlaybox[Study Limitations and Methodological Challenges]{
+
+\textbf{3. Sample-Based Calibration}
+\begin{itemize}
+    \item \textbf{Limitation:} Calibration used 4,126 stratified samples, not full 2.86M pixels
+    \item \textbf{Impact:} 
+    \begin{itemize}
+        \item High reported accuracy (93.65\%) may not reflect full spatial performance
+        \item Neighborhood effects calculated on samples, not actual spatial neighborhoods
+        \item Full raster validation not performed
+    \end{itemize}
+\end{itemize}
+}
+% --- SLIDE 31: Additional Limitations ---
+\overlaybox[Additional Limitations and Constraints]{
+\textbf{4. Static Driver Assumption (2020 values frozen)}
+\begin{itemize}
+    \item \textbf{Limitation:} All driver variables held constant at 2020 values
+    \begin{itemize}
+        \item Population density: 2020 GHS-POP used for all future years
+        \item Road network: 2020 OSM data (no new roads added)
+        \item Slope, elevation, distance to center: naturally static
+    \end{itemize}
+    \item \textbf{Reality:} Infrastructure expands, population redistributes
+    \item \textbf{Implication:} Underestimates growth in areas with future infrastructure development
+\end{itemize}
+
+}
+% --- SLIDE 31: Additional Limitations ---
+\overlaybox[Additional Limitations and Constraints]{
+\textbf{5. Model Validation Constraints}
+\begin{itemize}
+    \item \textbf{Calibration:} 1990→2000 (historical data available)
+    \item \textbf{Validation:} 2000→2010 (sample-based, not full raster)
+    \item \textbf{Gap:} No validation for 2010→2020 or beyond
+    \item \textbf{Impact:} Cannot assess model performance for recent decade or future
+\end{itemize}
+\vspace{0.3em}
+}
+% --- SLIDE 31: Additional Limitations ---
+\overlaybox[Additional Limitations and Constraints]{
+\textbf{6. Single Scenario (Business-as-usual only)}
+\begin{itemize}
+    \item \textbf{Limitation:} Only BAU growth modeled at 2.67\% annual rate
+\end{itemize}
+}
+% --- SLIDE 31: Additional Limitations ---
+\overlaybox[Additional Limitations and Constraints]{
+
+\textbf{7. No Empirical Future Validation Possible}
+\begin{itemize}
+    \item \textbf{Fundamental constraint:} Predictions for 2025–2050 cannot be validated
+    \item \textbf{Reliance:} Model accuracy depends on historical calibration holding into future
+    \item \textbf{Assumption:} Growth patterns/drivers remain consistent (may not hold)
+\end{itemize}
+}
+% --- SLIDE 32: Future Work ---
+\overlaybox[What We Plan to Work on]{
+\textbf{1. Full CA-Based GA Optimization}
+\begin{itemize}
+    \item Attempt full-resolution raster-based calibration (not sample-based)
+    \item Use complete CA simulation for fitness evaluation (50 individuals, 100 generations)
+    \item Expected benefit: Rigorously optimized parameters with validated spatial accuracy
+\end{itemize}
+\vspace{0.5em}
+
+\vspace{0.5em}
+
+}
+
+
+
+% --- REFERENCES ---
+\overlaybox[References]{
+{\small
+Vani, M., \& Prasad, P. R. C. (2022). Modelling urban expansion of a south-east Asian city, India: Comparison between SLEUTH and a hybrid CA model. \textit{Modeling Earth Systems and Environment}. https://doi.org/10.1007/s40808-022-01554-1
+
+Clarke, K. C., Hoppen, S., \& Gaydos, L. (1997). A self-modifying cellular automaton model of historical urbanization in the San Francisco Bay area. 
+
+Vani, M., \& Prasad, P. R. C. (2020). Assessment of spatio-temporal changes in land use and land cover, urban sprawl, and land surface temperature in and around Vijayawada city, India. \textit{Environment, Development and Sustainability}.
+
+
+Sapena, M., \& Ruiz, L. A. (2019). Analysis of land use/land cover spatio-temporal metrics and population dynamics for urban growth characterization. \textit{Computers, Environment and Urban Systems}, 73, 27–39.
+}
+
+}
+{
+\usebackgroundtemplate{\includegraphics[width=\paperwidth,height=\paperheight]{city.jpg}}
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[DarkGreenOverlay, opacity=0.7] (current page.south west) rectangle (current page.north east);
+    \node[anchor=center, text width=0.8\paperwidth] at (current page.center) {
+      \begin{center}
+      \Huge\color{White}\textbf{Thank You}\\[1em]
+      \end{center}
+    };
+  \end{tikzpicture}
+\end{frame}
+}
+\end{document}
