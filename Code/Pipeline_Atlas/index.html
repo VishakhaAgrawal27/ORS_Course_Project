@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hyderabad Urban Growth Atlas | CA-MLR-GA</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#06080F;--bg2:#0A0F1A;--bg3:#111827;--bg4:#161B26;
+  --bd:#1E293B;--t1:#F0F4F8;--t2:#94A3B8;--t3:#64748B;
+  --ac:#00D5E0;--pk:#FF5872;--gold:#FFD700;
+}
+body{background:var(--bg);color:var(--t1);font-family:'Source Sans 3',system-ui,sans-serif;overflow-x:hidden}
+
+/* Hero */
+.hr{padding:3rem 2rem 2.5rem;text-align:center;background:linear-gradient(180deg,#0A0F1A,var(--bg));border-bottom:1px solid var(--bd);position:relative;overflow:hidden}
+.hr::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(0,213,224,.08),transparent);pointer-events:none}
+.hr::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 50% 40% at 80% 100%,rgba(255,88,114,.05),transparent);pointer-events:none}
+.hr *{position:relative;z-index:1}
+.hr h1{font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3.2rem);font-weight:900;letter-spacing:-.03em;line-height:1.05}
+.hr h1 em{font-style:normal;color:var(--ac)}
+.hr h1 .pk{color:var(--pk);font-style:normal}
+.hr .af{color:var(--t3);font-size:.78rem;margin-top:.6rem;letter-spacing:.06em;text-transform:uppercase}
+.hr .su{color:var(--t2);margin-top:1rem;font-size:.95rem;max-width:760px;margin-inline:auto;line-height:1.6}
+.ss{display:flex;justify-content:center;gap:2.5rem;margin-top:1.6rem;flex-wrap:wrap}
+.sv{font-family:'Playfair Display',serif;font-size:1.9rem;color:var(--ac);font-weight:700;line-height:1}
+.sv.gold{color:var(--gold)}
+.sv.pk{color:var(--pk)}
+.sl{font-size:.62rem;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;margin-top:.25rem}
+
+/* Nav */
+.nv{display:flex;gap:1px;padding:0 .5rem;overflow-x:auto;background:var(--bg2);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100}
+.tb{background:none;border:none;padding:.85rem 1rem;color:var(--t3);font-family:inherit;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;display:flex;align-items:center;gap:.5rem}
+.tb:hover{color:var(--t1);background:var(--bg3)}
+.tb.active{color:var(--ac);border-bottom-color:var(--ac);background:var(--bg3)}
+.ti{font-size:1rem}
+.tl{font-size:.78rem}
+.tc{font-size:.6rem;background:var(--bd);border-radius:99px;padding:.1rem .42rem;color:var(--t2)}
+.tb.active .tc{background:var(--ac);color:var(--bg)}
+
+/* Main */
+.mn{max-width:1480px;margin:0 auto;padding:1.6rem 1.4rem 4rem}
+.ph{display:flex;align-items:center;gap:1rem;margin-bottom:1.4rem}
+.pi{font-size:1.6rem;width:2.8rem;height:2.8rem;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.ph h2{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700}
+.pd{color:var(--t2);font-size:.84rem;margin-top:.2rem}
+
+.cg2{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:.7rem}
+.cd{background:var(--bg3);border:1px solid var(--bd);border-radius:7px;cursor:pointer;transition:all .2s;display:flex;overflow:hidden;animation:fu .35s ease-out both}
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.cd:hover{background:var(--bg4);border-color:var(--ac);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,213,224,.08)}
+.cs{width:3px;flex-shrink:0;border-radius:7px 0 0 7px}
+.cb{padding:.95rem 1.15rem;flex:1;min-width:0}
+.ct{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;justify-content:space-between}
+.cn{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--ac);line-height:1;font-weight:700}
+.cg{font-size:.55rem;font-weight:600;padding:.16rem .55rem;border-radius:99px;border:1px solid;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.cd h3{font-size:.92rem;font-weight:700;line-height:1.3;margin-bottom:.3rem;color:var(--t1)}
+.dp{font-size:.76rem;color:var(--t2);line-height:1.5}
+.ca{font-size:.7rem;color:var(--ac);margin-top:.5rem;opacity:0;transition:opacity .2s}
+.cd:hover .ca{opacity:1}
+
+/* Footer */
+.sf{margin-top:2rem;padding:1.4rem 1.5rem;background:var(--bg2);border:1px solid var(--bd);border-radius:8px}
+.sf h3{font-family:'Playfair Display',serif;margin-bottom:.7rem;font-size:1.05rem;color:var(--t1)}
+.sf p{color:var(--t2);font-size:.78rem;line-height:1.7}
+.sf a{color:var(--ac);text-decoration:none}
+.sf .author{color:var(--t3);font-size:.7rem;margin-top:.6rem;letter-spacing:.04em}
+
+/* Modal */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;justify-content:center;align-items:center;backdrop-filter:blur(6px)}
+.ov.sh{display:flex}
+.ov iframe{width:97vw;height:94vh;border:none;border-radius:8px;background:var(--bg)}
+.xb{position:fixed;top:14px;right:18px;background:var(--pk);color:#fff;border:none;width:38px;height:38px;border-radius:50%;font-size:1.05rem;cursor:pointer;z-index:1001;display:flex;align-items:center;justify-content:center;font-weight:700;box-shadow:0 0 20px rgba(255,88,114,.4)}
+
+@media(max-width:768px){.cg2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hr">
+  <h1>The <em>Hyderabad Urban Growth</em> <span class="pk">Atlas</span></h1>
+  <p class="af">CA-MLR-GA Spatial Modeling | IIIT Hyderabad | 1990 to 2050</p>
+  <p class="su">Nineteen interactive visualizations built from a 30-year cellular automaton simulation calibrated against Landsat-classified historical land cover. Every number traces back to a deterministic source. Every animation reflects a model run.</p>
+  <div class="ss">
+    <div><div class="sv">19</div><div class="sl">Charts</div></div>
+    <div><div class="sv gold">11</div><div class="sl">3D Scenes</div></div>
+    <div><div class="sv">17</div><div class="sl">Scenarios Tested</div></div>
+    <div><div class="sv pk">+535 km&sup2;</div><div class="sl">Predicted Growth</div></div>
+    <div><div class="sv">5</div><div class="sl">Themes</div></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nv">
+<button class="tb active" onclick="sw('temporal')" id="b-temporal"><span class="ti">⏱</span><span class="tl">Time & Cadence</span><span class="tc">3</span></button>
+<button class="tb" onclick="sw('spatial')" id="b-spatial"><span class="ti">🗺</span><span class="tl">Spatial Reveals</span><span class="tc">5</span></button>
+<button class="tb" onclick="sw('drivers')" id="b-drivers"><span class="ti">🧭</span><span class="tl">Driver Mechanics</span><span class="tc">3</span></button>
+<button class="tb" onclick="sw('scenarios')" id="b-scenarios"><span class="ti">🌟</span><span class="tl">Scenario Sweep</span><span class="tc">6</span></button>
+<button class="tb" onclick="sw('diag')" id="b-diag"><span class="ti">⚙️</span><span class="tl">Mechanism Diagnostics</span><span class="tc">2</span></button>
+</nav>
+
+<!-- MAIN -->
+<div class="mn">
+<div class="tp" id="p-temporal" style="display:flex;flex-direction:column">
+<div class="ph">
+  <div class="pi" style="background:#00D5E022;color:#00D5E0">⏱</div>
+  <div><h2>Time & Cadence</h2><p class="pd">3 charts.</p></div>
+</div>
+<div class="cg2"><div class="cd" onclick="op('01_growth_cadence_clock.html')">
+<div class="cs" style="background:#00D5E0"></div>
+<div class="cb">
+<div class="ct"><span class="cn">01</span><span class="cg" style="background:#00D5E015;color:#00D5E0;border-color:#00D5E033">Animated 3D</span></div>
+<h3>Growth Cadence Clock</h3><p class="dp">60 years of built-up area drawn as a clock spiral</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('17_the_city_year_by_year.html')">
+<div class="cs" style="background:#00D5E0"></div>
+<div class="cb">
+<div class="ct"><span class="cn">17</span><span class="cg" style="background:#00D5E015;color:#00D5E0;border-color:#00D5E033">Animated 3D</span></div>
+<h3>The City, Year by Year</h3><p class="dp">Animated time-lapse of every newly-built pixel from 2020 to 2050</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('20_driver-space_bubble_race.html')">
+<div class="cs" style="background:#00D5E0"></div>
+<div class="cb">
+<div class="ct"><span class="cn">20</span><span class="cg" style="background:#00D5E015;color:#00D5E0;border-color:#00D5E033">Animated 2D</span></div>
+<h3>Driver-Space Bubble Race</h3><p class="dp">The centroid of new growth drifting outward over six periods</p>
+<div class="ca">Open chart &rarr;</div></div></div></div>
+</div>
+<div class="tp" id="p-spatial" style="display:none;flex-direction:column">
+<div class="ph">
+  <div class="pi" style="background:#FFD70022;color:#FFD700">🗺</div>
+  <div><h2>Spatial Reveals</h2><p class="pd">5 charts.</p></div>
+</div>
+<div class="cg2"><div class="cd" onclick="op('19_skyline_of_age.html')">
+<div class="cs" style="background:#FFD700"></div>
+<div class="cb">
+<div class="ct"><span class="cn">19</span><span class="cg" style="background:#FFD70015;color:#FFD700;border-color:#FFD70033">Three.js</span></div>
+<h3>Skyline of Age</h3><p class="dp">A 3D voxel city where tower height encodes how long each pixel has been built</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('10_the_origins_map.html')">
+<div class="cs" style="background:#FFD700"></div>
+<div class="cb">
+<div class="ct"><span class="cn">10</span><span class="cg" style="background:#FFD70015;color:#FFD700;border-color:#FFD70033">Three.js extruded</span></div>
+<h3>The Origins Map</h3><p class="dp">New built-up coloured by what it used to be — vegetation, barren, or water</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('11_the_sigmoid_of_fate.html')">
+<div class="cs" style="background:#FFD700"></div>
+<div class="cb">
+<div class="ct"><span class="cn">11</span><span class="cg" style="background:#FFD70015;color:#FFD700;border-color:#FFD70033">Three.js extruded</span></div>
+<h3>The Sigmoid of Fate</h3><p class="dp">Pixels coloured by the year they became urban</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('15_six_periods_of_flow.html')">
+<div class="cs" style="background:#FFD700"></div>
+<div class="cb">
+<div class="ct"><span class="cn">15</span><span class="cg" style="background:#FFD70015;color:#FFD700;border-color:#FFD70033">Three.js</span></div>
+<h3>Six Periods of Flow</h3><p class="dp">Class transitions across six 5-year windows, as 3D layered Sankey</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('09_the_transition_matrix.html')">
+<div class="cs" style="background:#FFD700"></div>
+<div class="cb">
+<div class="ct"><span class="cn">09</span><span class="cg" style="background:#FFD70015;color:#FFD700;border-color:#FFD70033">Three.js</span></div>
+<h3>The Transition Matrix</h3><p class="dp">2020 to 2050 land-cover flows as 3D class pillars with particle streams</p>
+<div class="ca">Open chart &rarr;</div></div></div></div>
+</div>
+<div class="tp" id="p-drivers" style="display:none;flex-direction:column">
+<div class="ph">
+  <div class="pi" style="background:#FF587222;color:#FF5872">🧭</div>
+  <div><h2>Driver Mechanics</h2><p class="pd">3 charts.</p></div>
+</div>
+<div class="cg2"><div class="cd" onclick="op('03_driver_polarity_rose.html')">
+<div class="cs" style="background:#FF5872"></div>
+<div class="cb">
+<div class="ct"><span class="cn">03</span><span class="cg" style="background:#FF587215;color:#FF5872;border-color:#FF587233">Three.js radial</span></div>
+<h3>Driver Polarity Rose</h3><p class="dp">Five drivers, five spokes — sign and weight of each MLR coefficient</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('04_pearson_correlation_network.html')">
+<div class="cs" style="background:#FF5872"></div>
+<div class="cb">
+<div class="ct"><span class="cn">04</span><span class="cg" style="background:#FF587215;color:#FF5872;border-color:#FF587233">D3 force</span></div>
+<h3>Pearson Correlation Network</h3><p class="dp">Force-directed graph showing driver inter-correlations</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('12_driver_distributions.html')">
+<div class="cs" style="background:#FF5872"></div>
+<div class="cb">
+<div class="ct"><span class="cn">12</span><span class="cg" style="background:#FF587215;color:#FF5872;border-color:#FF587233">Plotly violin</span></div>
+<h3>Driver Distributions</h3><p class="dp">Five drivers, three populations: who urbanises and who does not</p>
+<div class="ca">Open chart &rarr;</div></div></div></div>
+</div>
+<div class="tp" id="p-scenarios" style="display:none;flex-direction:column">
+<div class="ph">
+  <div class="pi" style="background:#FFD70022;color:#FFD700">🌟</div>
+  <div><h2>Scenario Sweep</h2><p class="pd">6 charts.</p></div>
+</div>
+<div class="cg2"><div class="cd" onclick="op('05_seventeen_scenario_constellation.html')">
+<div class="cs" style="background:#FFD700"></div>
+<div class="cb">
+<div class="ct"><span class="cn">05</span><span class="cg" style="background:#FFD70015;color:#FFD700;border-color:#FFD70033">Three.js stars</span></div>
+<h3>Seventeen Scenario Constellation</h3><p class="dp">Each scenario is a star in 3D parameter space, sized by its 2030 footprint</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('07_the_sensitivity_cathedral.html')">
+<div class="cs" style="background:#FFD700"></div>
+<div class="cb">
+<div class="ct"><span class="cn">07</span><span class="cg" style="background:#FFD70015;color:#FFD700;border-color:#FFD70033">Three.js</span></div>
+<h3>The Sensitivity Cathedral</h3><p class="dp">Three columns of 3D bars showing how compactness responds to each parameter family</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('16_scenario_similarity_chord.html')">
+<div class="cs" style="background:#FFD700"></div>
+<div class="cb">
+<div class="ct"><span class="cn">16</span><span class="cg" style="background:#FFD70015;color:#FFD700;border-color:#FFD70033">D3 chord</span></div>
+<h3>Scenario Similarity Chord</h3><p class="dp">17 scenarios on a circle; ribbons show pairs whose footprints agree most</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('18_rolling_compactness_ridge.html')">
+<div class="cs" style="background:#FFD700"></div>
+<div class="cb">
+<div class="ct"><span class="cn">18</span><span class="cg" style="background:#FFD70015;color:#FFD700;border-color:#FFD70033">Three.js</span></div>
+<h3>Rolling Compactness Ridge</h3><p class="dp">17 scenarios as 3D ribbons connecting their 2030 and 2040 compactness</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('13_conservation_vs_boom.html')">
+<div class="cs" style="background:#FFD700"></div>
+<div class="cb">
+<div class="ct"><span class="cn">13</span><span class="cg" style="background:#FFD70015;color:#FFD700;border-color:#FFD70033">Three.js</span></div>
+<h3>Conservation vs Boom</h3><p class="dp">3D ghost overlay where two extreme scenarios disagree about what gets built</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('14_the_agreement_field.html')">
+<div class="cs" style="background:#FFD700"></div>
+<div class="cb">
+<div class="ct"><span class="cn">14</span><span class="cg" style="background:#FFD70015;color:#FFD700;border-color:#FFD70033">Three.js</span></div>
+<h3>The Agreement Field</h3><p class="dp">A 3D height field where tower height counts how many of 17 scenarios mark a pixel built</p>
+<div class="ca">Open chart &rarr;</div></div></div></div>
+</div>
+<div class="tp" id="p-diag" style="display:none;flex-direction:column">
+<div class="ph">
+  <div class="pi" style="background:#00D5E022;color:#00D5E0">⚙️</div>
+  <div><h2>Mechanism Diagnostics</h2><p class="pd">2 charts.</p></div>
+</div>
+<div class="cg2"><div class="cd" onclick="op('02_the_barren_paradox.html')">
+<div class="cs" style="background:#00D5E0"></div>
+<div class="cb">
+<div class="ct"><span class="cn">02</span><span class="cg" style="background:#00D5E015;color:#00D5E0;border-color:#00D5E033">Plotly time-series</span></div>
+<h3>The Barren Paradox</h3><p class="dp">The class that grows by shrinking — historical noise vs predicted decline</p>
+<div class="ca">Open chart &rarr;</div></div></div>
+<div class="cd" onclick="op('06_the_quota_ribbon.html')">
+<div class="cs" style="background:#00D5E0"></div>
+<div class="cb">
+<div class="ct"><span class="cn">06</span><span class="cg" style="background:#00D5E015;color:#00D5E0;border-color:#00D5E033">Three.js stack</span></div>
+<h3>The Quota Ribbon</h3><p class="dp">How the cellular automaton decides how much to build each period</p>
+<div class="ca">Open chart &rarr;</div></div></div></div>
+</div>
+
+<div class="sf">
+<h3>About this Atlas</h3>
+<p>Land-cover classification via Random Forest on Landsat 5/7/8 surface-reflectance imagery (1990, 1995, ..., 2020). Built-up futures projected via a Cellular Automaton driven by an MLR transition probability model with five spatial drivers (slope, elevation, population density, distance to city center, distance to major roads) and a Genetic Algorithm-tuned neighborhood weight (omega), inertia (alpha), and quota rate. Validated against held-out 2020 imagery; full pipeline and per-scenario diagnostics in source notebook.</p>
+<p style="margin-top:.7rem">All numeric values cross-checked against the original simulation pipeline. See the per-chart source notes for traceback paths.</p>
+<p class="author">Vishakha Agrawal &middot; Goni Anagha &middot; Gandlur Valli &middot; Nunna Sri Abhinaya | Optical Remote Sensing | IIIT Hyderabad | 2026</p>
+</div>
+</div>
+
+<!-- MODAL -->
+<div class="ov" id="ov" onclick="if(event.target===this)cl()">
+<button class="xb" onclick="cl()">&times;</button>
+<iframe id="if" src=""></iframe>
+</div>
+
+<script>
+function sw(t){
+  document.querySelectorAll('.tp').forEach(p=>p.style.display='none');
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('p-'+t).style.display='flex';
+  document.getElementById('b-'+t).classList.add('active');
+}
+function op(f){
+  document.getElementById('if').src='charts/'+f;
+  document.getElementById('ov').classList.add('sh');
+}
+function cl(){
+  document.getElementById('ov').classList.remove('sh');
+  document.getElementById('if').src='';
+}
+// ESC closes modal
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') cl();
+});
+</script>
+</body></html>

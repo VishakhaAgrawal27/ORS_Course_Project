@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Transition Matrix | Hyderabad Urban Growth Atlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="../libs/three.min.js"></script>
+</head>
+<body>
+
+<div class="backlink">
+  <a href="../index.html" target="_top">&#9664; Atlas</a>
+  <span class="sep">|</span>
+  <span class="number">#09</span>
+  <span class="title-here">The Transition Matrix</span>
+  <span class="spacer"></span>
+  <a class="prev" href="15_six_periods_of_flow.html">&larr; Prev</a>
+  <span class="sep">|</span>
+  <a class="next" href="03_driver_polarity_rose.html">Next &rarr;</a>
+</div>
+
+<div class="scene" id="scene"></div>
+
+<div class="info">
+  <div class="eyebrow">Chart 09 &middot; Spatial Reveals</div>
+  <h1>Where each square kilometre of <em>2020 ends up by 2050</em>.</h1>
+  <p>Four <span class="ac">left pillars</span> are the 2020 source classes (water, vegetation, barren, built); four <span class="pk">right pillars</span> are the 2050 destination classes. Pillar height = total km<sup>2</sup>. Glowing particle streams flow from each source to each destination, with stream thickness proportional to the flow's km<sup>2</sup>. The biggest stream you'll see is <span class="gold">vegetation pouring into built</span>: 261.6 km<sup>2</sup> of green becoming red.</p>
+</div>
+
+<div class="legend">
+  <div class="lhdr">Class Pillars</div>
+  <div class="li"><div class="ld" style="background:#1b88c4"></div>Water</div>
+  <div class="li"><div class="ld" style="background:#4caf6e"></div>Vegetation</div>
+  <div class="li"><div class="ld" style="background:#d49a3a"></div>Barren</div>
+  <div class="li"><div class="ld" style="background:#FF5872"></div>Built-up</div>
+  <div class="lf">Drag to orbit &middot; hover a stream</div>
+</div>
+
+<div class="analysis">
+  <div class="card">
+    <div class="lbl">Largest flow</div>
+    <span class="num pk">341.1 km&sup2;</span>
+    <b>Barren &rarr; built</b>. The model finds Hyderabad's growth eats barren land disproportionately because it's the easy frontier just outside the existing city.
+  </div>
+  <div class="card">
+    <div class="lbl">Second-largest</div>
+    <span class="num">261.6 km&sup2;</span>
+    <b>Vegetation &rarr; built</b>. Roughly equal to the barren flow but spatially more dispersed, reaching deeper into agricultural and tree-cover zones.
+  </div>
+  <div class="card">
+    <div class="lbl">Stable diagonal</div>
+    <span class="num gold">68.2%</span>
+    Of the study area, this fraction of pixels stays in the same class for the entire 30-year horizon. The remaining 31.8% changes class at least once.
+  </div>
+  <div class="card">
+    <div class="lbl">Water defended</div>
+    <span class="num ac">16.9 km&sup2;</span>
+    Only this much water becomes built. The CA's exclusion mask strictly forbids urbanisation of the major lakes and reservoirs around Hyderabad.
+  </div>
+</div>
+
+<script>
+fetch('../data.json').then(r => r.json()).then(d => initChart(d));
+
+function initChart(D){
+  const T = D.spatial.full_transitions_2020_2050_km2;
+  const classes = T.classes;            // ['water','vegetation','barren','built']
+  const M = T.matrix;                   // 4x4 km^2
+  const classNames = ['Water', 'Vegetation', 'Barren', 'Built'];
+  const classColors = [0x1b88c4, 0x4caf6e, 0xd49a3a, 0xff5872];
+  const classColorsHex = ['#1b88c4', '#4caf6e', '#d49a3a', '#ff5872'];
+
+  // Pillar setup: heights = total km2 in 2020 (rows) and 2050 (cols)
+  const sourceTotals = M.map(row => row.reduce((a,b) => a+b, 0));
+  const destTotals = [0,0,0,0];
+  for (let i = 0; i < 4; i++)
+    for (let j = 0; j < 4; j++)
+      destTotals[j] += M[i][j];
+
+  const HEIGHT_SCALE = 0.018;  // 1000 km^2 = 18 world units
+  const PILLAR_R = 1.2;
+  const SOURCE_X = -16, DEST_X = 16;
+  const ROW_SPACING = 5.2;
+
+  const renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x06080F);
+  document.getElementById('scene').appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x06080F, 0.0042);
+  const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 500);
+  camera.position.set(35, 28, 40);
+  camera.lookAt(0, 8, 0);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.85);
+  dl.position.set(20, 30, 20);
+  scene.add(dl);
+  const cyan = new THREE.PointLight(0x00d5e0, 0.4, 60);
+  cyan.position.set(-20, 12, 0);
+  scene.add(cyan);
+  const pink = new THREE.PointLight(0xff5872, 0.4, 60);
+  pink.position.set(20, 12, 0);
+  scene.add(pink);
+
+  // Ground
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(80, 50),
+    new THREE.MeshLambertMaterial({color: 0x0A0F1A})
+  );
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+  const grid = new THREE.GridHelper(60, 12, 0x1E293B, 0x111827);
+  grid.position.y = 0.02;
+  scene.add(grid);
+
+  // Build pillars: 4 source (left), 4 destination (right)
+  const pillarPositions = {
+    source: [],   // y position for stacking flows
+    dest: [],
+  };
+  function addLabel(text, pos, color, sz){
+    const cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 96;
+    const cx = cv.getContext('2d');
+    cx.fillStyle = color;
+    cx.font = '600 32px Source Sans 3, sans-serif';
+    cx.textAlign = 'center';
+    cx.fillText(text, 128, 38);
+    cx.fillStyle = '#94A3B8';
+    cx.font = '500 18px JetBrains Mono, monospace';
+    cx.fillText(sz, 128, 70);
+    const tex = new THREE.CanvasTexture(cv);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+    sp.position.set(...pos);
+    sp.scale.set(5, 1.8, 1);
+    scene.add(sp);
+  }
+
+  // Source pillars (2020)
+  for (let i = 0; i < 4; i++){
+    const z = (i - 1.5) * ROW_SPACING;
+    const h = sourceTotals[i] * HEIGHT_SCALE;
+    const cyl = new THREE.Mesh(
+      new THREE.CylinderGeometry(PILLAR_R, PILLAR_R, h, 24),
+      new THREE.MeshPhongMaterial({color: classColors[i], emissive: classColors[i], emissiveIntensity:0.6, shininess:60})
+    );
+    cyl.position.set(SOURCE_X, h/2, z);
+    scene.add(cyl);
+    pillarPositions.source.push({x: SOURCE_X, z, h});
+    addLabel(classNames[i] + ' (2020)', [SOURCE_X, h + 1.8, z], classColorsHex[i], sourceTotals[i].toFixed(0) + ' km\u00b2');
+  }
+  // Destination pillars (2050)
+  for (let j = 0; j < 4; j++){
+    const z = (j - 1.5) * ROW_SPACING;
+    const h = destTotals[j] * HEIGHT_SCALE;
+    const cyl = new THREE.Mesh(
+      new THREE.CylinderGeometry(PILLAR_R, PILLAR_R, h, 24),
+      new THREE.MeshPhongMaterial({color: classColors[j], emissive: classColors[j], emissiveIntensity:0.6, shininess:60})
+    );
+    cyl.position.set(DEST_X, h/2, z);
+    scene.add(cyl);
+    pillarPositions.dest.push({x: DEST_X, z, h});
+    addLabel(classNames[j] + ' (2050)', [DEST_X, h + 1.8, z], classColorsHex[j], destTotals[j].toFixed(0) + ' km\u00b2');
+  }
+
+  // Flow ribbons + particles for each non-trivial transition
+  const flows = [];  // collect for animation
+  // Stack flows along pillar height: track current y for each source and dest pillar
+  const sourceY = sourceTotals.map(t => 0);
+  const destY = destTotals.map(t => 0);
+
+  // Soft point texture
+  const ptCanvas = document.createElement('canvas');
+  ptCanvas.width = 32; ptCanvas.height = 32;
+  const ptCtx = ptCanvas.getContext('2d');
+  const pg = ptCtx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  pg.addColorStop(0, 'rgba(255,255,255,1)');
+  pg.addColorStop(0.5, 'rgba(255,255,255,0.5)');
+  pg.addColorStop(1, 'rgba(255,255,255,0)');
+  ptCtx.fillStyle = pg;
+  ptCtx.fillRect(0, 0, 32, 32);
+  const ptTex = new THREE.CanvasTexture(ptCanvas);
+
+  // Build flow tubes (TubeGeometry along Bezier curve) + particles
+  const allParticles = [];
+  const flowMeshes = [];
+  for (let i = 0; i < 4; i++){
+    for (let j = 0; j < 4; j++){
+      const v = M[i][j];
+      if (v < 1.5) continue;  // skip tiny flows
+      const flowH = v * HEIGHT_SCALE;
+      const startY = sourceY[i] + flowH/2;
+      const endY = destY[j] + flowH/2;
+      sourceY[i] += flowH;
+      destY[j] += flowH;
+      const startPos = new THREE.Vector3(SOURCE_X + PILLAR_R, startY, (i - 1.5) * ROW_SPACING);
+      const endPos = new THREE.Vector3(DEST_X - PILLAR_R, endY, (j - 1.5) * ROW_SPACING);
+      // Bezier curve with arc upward
+      const mid = new THREE.Vector3(
+        (startPos.x + endPos.x) / 2,
+        Math.max(startY, endY) + 4,
+        (startPos.z + endPos.z) / 2,
+      );
+      const curve = new THREE.QuadraticBezierCurve3(startPos, mid, endPos);
+      // Tube radius proportional to sqrt(km^2) for visual area-proportional thickness
+      const tubeR = Math.max(0.08, 0.02 * Math.sqrt(v));
+      const tubeGeom = new THREE.TubeGeometry(curve, 50, tubeR, 8, false);
+      // Color: blend source -> dest? For diagonal use source color; for off-diagonal use destination color (where it ends up)
+      const flowColor = i === j ? classColors[i] : classColors[j];
+      const tube = new THREE.Mesh(tubeGeom, new THREE.MeshBasicMaterial({
+        color: flowColor, transparent: true, opacity: 0.18,
+      }));
+      tube.userData = {src: classNames[i], dst: classNames[j], km2: v};
+      scene.add(tube);
+      flowMeshes.push(tube);
+
+      // Particle stream along this curve
+      const NP = Math.max(8, Math.floor(v / 12));  // count proportional to flow
+      for (let k = 0; k < NP; k++){
+        allParticles.push({
+          curve, t: k / NP,
+          speed: 0.0015 + Math.random() * 0.0008,
+          color: flowColor,
+        });
+      }
+      flows.push({i, j, v, startY, endY});
+    }
+  }
+
+  // Single Points object for all particles (efficient)
+  const PCOUNT = allParticles.length;
+  const partPos = new Float32Array(PCOUNT * 3);
+  const partCol = new Float32Array(PCOUNT * 3);
+  const tmpC = new THREE.Color();
+  for (let p = 0; p < PCOUNT; p++){
+    const pt = allParticles[p].curve.getPoint(allParticles[p].t);
+    partPos[p*3] = pt.x; partPos[p*3+1] = pt.y; partPos[p*3+2] = pt.z;
+    tmpC.setHex(allParticles[p].color);
+    partCol[p*3] = tmpC.r; partCol[p*3+1] = tmpC.g; partCol[p*3+2] = tmpC.b;
+  }
+  const partGeom = new THREE.BufferGeometry();
+  partGeom.setAttribute('position', new THREE.BufferAttribute(partPos, 3));
+  partGeom.setAttribute('color', new THREE.BufferAttribute(partCol, 3));
+  const partMat = new THREE.PointsMaterial({
+    map: ptTex, vertexColors: true, size: 0.5,
+    transparent: true, opacity: 0.9,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+    sizeAttenuation: true,
+  });
+  const points = new THREE.Points(partGeom, partMat);
+  scene.add(points);
+
+  // Hover tooltip on flow tubes
+  const tip = document.getElementById('tip');
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  let hovered = null;
+  renderer.domElement.addEventListener('mousemove', e => {
+    mouse.x = (e.clientX / innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(flowMeshes);
+    if (hits.length > 0){
+      const d = hits[0].object.userData;
+      tip.style.display = 'block';
+      tip.style.left = (e.clientX + 14) + 'px';
+      tip.style.top = (e.clientY - 12) + 'px';
+      tip.innerHTML = `<b>${d.src} \u2192 ${d.dst}</b><br>${d.km2.toFixed(2)} km\u00b2 over 30 years`;
+      if (hovered && hovered !== hits[0].object) hovered.material.opacity = 0.18;
+      hovered = hits[0].object;
+      hovered.material.opacity = 0.5;
+    } else {
+      tip.style.display = 'none';
+      if (hovered){ hovered.material.opacity = 0.18; hovered = null; }
+    }
+  });
+
+  // Starfield
+  const sCount = 600;
+  const sGeom = new THREE.BufferGeometry();
+  const sPos = new Float32Array(sCount * 3);
+  for (let i = 0; i < sCount; i++){
+    const r = 60 + Math.random() * 100;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const theta = Math.random() * Math.PI * 2;
+    sPos[i*3] = r * Math.sin(phi) * Math.cos(theta);
+    sPos[i*3+1] = Math.abs(r * Math.cos(phi)) * 0.7 + 30;
+    sPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
+  }
+  sGeom.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+  scene.add(new THREE.Points(sGeom, new THREE.PointsMaterial({
+    color: 0x6080a0, size: 0.6, transparent: true, opacity: 0.45,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  })));
+
+  // Camera orbit
+  let theta = Math.atan2(camera.position.x, camera.position.z);
+  let phi = Math.atan2(Math.sqrt(camera.position.x**2 + camera.position.z**2), camera.position.y);
+  let radius = camera.position.length();
+  let target = new THREE.Vector3(0, 8, 0);
+  let isDown = false, mouseX = 0, mouseY = 0;
+  function updateCamera(){
+    camera.position.set(
+      radius * Math.sin(phi) * Math.sin(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.cos(theta)
+    ).add(target);
+    camera.lookAt(target);
+  }
+  renderer.domElement.addEventListener('mousedown', e => {
+    isDown = true; mouseX = e.clientX; mouseY = e.clientY;
+    renderer.domElement.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => { isDown = false; renderer.domElement.style.cursor = 'grab'; });
+  window.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    theta -= (e.clientX - mouseX) * 0.006;
+    phi   -= (e.clientY - mouseY) * 0.006;
+    phi = Math.max(0.10, Math.min(Math.PI/2 - 0.05, phi));
+    updateCamera();
+    mouseX = e.clientX; mouseY = e.clientY;
+  });
+  renderer.domElement.addEventListener('wheel', e => {
+    e.preventDefault();
+    radius *= 1 + e.deltaY * 0.001;
+    radius = Math.max(20, Math.min(120, radius));
+    updateCamera();
+  }, {passive: false});
+  renderer.domElement.style.cursor = 'grab';
+
+  function animate(){
+    requestAnimationFrame(animate);
+    // Auto-orbit when idle
+    if (!isDown){
+      theta += 0.0008;
+      updateCamera();
+    }
+    // Particles flow along their curves
+    for (let p = 0; p < PCOUNT; p++){
+      const pa = allParticles[p];
+      pa.t += pa.speed;
+      if (pa.t > 1) pa.t = 0;
+      const pt = pa.curve.getPoint(pa.t);
+      partPos[p*3] = pt.x; partPos[p*3+1] = pt.y; partPos[p*3+2] = pt.z;
+    }
+    partGeom.attributes.position.needsUpdate = true;
+    renderer.render(scene, camera);
+  }
+  animate();
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+}
+</script>
+</body></html>

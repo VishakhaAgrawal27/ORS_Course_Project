@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Origins Map | Hyderabad Urban Growth Atlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="../libs/three.min.js"></script>
+</head>
+<body>
+
+<div class="backlink">
+  <a href="../index.html" target="_top">&#9664; Atlas</a>
+  <span class="sep">|</span>
+  <span class="number">#10</span>
+  <span class="title-here">The Origins Map</span>
+  <span class="spacer"></span>
+  <a class="prev" href="19_skyline_of_age.html">&larr; Prev</a>
+  <span class="sep">|</span>
+  <a class="next" href="11_the_sigmoid_of_fate.html">Next &rarr;</a>
+</div>
+
+<div class="scene" id="scene"></div>
+
+<div class="info">
+  <div class="eyebrow">Chart 10 &middot; Spatial Reveals</div>
+  <h1>The new built-up &mdash; <em>colored by what it used to be</em>.</h1>
+  <p>A full 3D extrusion of Hyderabad's predicted 2050 footprint. Pixels that were already built in 2020 rise as the dark <span class="ac">core</span>; pixels the model adds by 2050 rise <em>shorter</em> and are colored by what they replaced. <span style="color:#4caf6e">Green</span> = vegetation eaten, <span style="color:#d49a3a">ochre</span> = barren consumed, <span style="color:#1b88c4">blue</span> = water (rare). Toggle filters at bottom to isolate one origin at a time.</p>
+</div>
+
+<div class="legend">
+  <div class="lhdr">Origin Class</div>
+  <div class="li"><div class="ld" style="background:#3a3530"></div>2020 baseline (existing)</div>
+  <div class="li"><div class="ld" style="background:#4caf6e"></div>Vegetation &rarr; built</div>
+  <div class="li"><div class="ld" style="background:#d49a3a"></div>Barren &rarr; built</div>
+  <div class="li"><div class="ld" style="background:#1b88c4"></div>Water &rarr; built (rare)</div>
+  <div class="lf">Drag to orbit &middot; scroll to zoom</div>
+</div>
+
+<div class="controls with-analysis">
+  <button class="btn active" id="btn-all">All</button>
+  <button class="btn" id="btn-veg" style="color:#4caf6e;border-color:#4caf6e">Vegetation</button>
+  <button class="btn" id="btn-barren" style="color:#d49a3a;border-color:#d49a3a">Barren</button>
+  <button class="btn" id="btn-water" style="color:#1b88c4;border-color:#1b88c4">Water</button>
+</div>
+
+<div class="analysis">
+  <div class="card">
+    <div class="lbl">Existing 2020</div>
+    <span class="num">457 km&sup2;</span>
+    The dark core. Random Forest classification of 2020 Landsat 8 surface reflectance, mode-pooled to a 422&times;422 grid.
+  </div>
+  <div class="card">
+    <div class="lbl">Vegetation eaten</div>
+    <span class="num" style="color:#4caf6e">261.6 km&sup2;</span>
+    The largest single replacement source for new built-up by 2050. Spatially dispersed, reaching deeper into agricultural and tree-cover zones.
+  </div>
+  <div class="card">
+    <div class="lbl">Barren consumed</div>
+    <span class="num" style="color:#d49a3a">341.1 km&sup2;</span>
+    The biggest flow into built. The easy frontier just outside the 2020 footprint &mdash; barren is the model's preferred replacement source per unit area.
+  </div>
+  <div class="card">
+    <div class="lbl">Water defended</div>
+    <span class="num" style="color:#1b88c4">16.9 km&sup2;</span>
+    The CA's exclusion mask explicitly forbids urbanizing the major lakes; only edge-effect leakage shows up.
+  </div>
+</div>
+
+<script>
+fetch('../data.json').then(r => r.json()).then(d => initChart(d));
+
+function initChart(D){
+  const cc = D.spatial.class_change_grid_422;
+  const toc = D.spatial.time_of_conversion_grid_422;
+  const [H, W] = cc.shape;
+  const ccVals = cc.values;
+  const tocVals = toc.values;
+
+  // Compose categorical grid:
+  //  -1 stable non-built
+  //   1 water -> built
+  //   2 vegetation -> built
+  //   3 barren -> built
+  //   4 existing 2020 built
+  const out = new Int8Array(H * W);
+  for (let i = 0; i < H * W; i++){
+    if (tocVals[i] === 1) out[i] = 4;
+    else if (ccVals[i] > 0) out[i] = ccVals[i];
+    else out[i] = -1;
+  }
+
+  // Color and height per category
+  const catColor = { 1: 0x1b88c4, 2: 0x4caf6e, 3: 0xd49a3a, 4: 0x3a3530 };
+  const catHeight = { 1: 2.2, 2: 2.2, 3: 2.2, 4: 5.8 };  // baseline taller
+  const catName = { 1: 'water', 2: 'veg', 3: 'barren', 4: 'baseline' };
+
+  // Count visible pixels
+  let nVis = 0;
+  for (let i = 0; i < H * W; i++){
+    if (out[i] >= 1) nVis++;
+  }
+
+  const renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x06080F);
+  document.getElementById('scene').appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x06080F, 0.0028);
+  const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 2000);
+  camera.position.set(120, 75, 130);
+  camera.lookAt(0, 5, 0);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.85);
+  dl.position.set(80, 120, 60);
+  scene.add(dl);
+  const cyan = new THREE.DirectionalLight(0x00d5e0, 0.85);
+  cyan.position.set(-80, 40, -60);
+  scene.add(cyan);
+  const fill = new THREE.DirectionalLight(0xff5872, 0.85);
+  fill.position.set(40, 30, -120);
+  scene.add(fill);
+
+  // Ground
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(280, 280),
+    new THREE.MeshLambertMaterial({color: 0x0A0F1A})
+  );
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+  const grid = new THREE.GridHelper(220, 22, 0x1E293B, 0x111827);
+  grid.position.y = 0.05;
+  scene.add(grid);
+
+  // InstancedMesh for all visible pixels
+  const cellSize = 0.5;
+  const boxGeom = new THREE.BoxGeometry(cellSize, 1, cellSize);
+  const mat = new THREE.MeshBasicMaterial({color: 0xffffff});
+  const inst = new THREE.InstancedMesh(boxGeom, mat, nVis);
+  inst.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(nVis * 3), 3);
+  scene.add(inst);
+
+  // Per-instance metadata for filtering
+  const instCat = new Uint8Array(nVis);
+  const instX = new Float32Array(nVis);
+  const instZ = new Float32Array(nVis);
+  const dummy = new THREE.Object3D();
+  const colorObj = new THREE.Color();
+
+  let idx = 0;
+  for (let r = 0; r < H; r++){
+    for (let c = 0; c < W; c++){
+      const i = r * W + c;
+      const cat = out[i];
+      if (cat < 1) continue;
+      const x = (c - W/2) * cellSize;
+      const z = (r - H/2) * cellSize;
+      const h = catHeight[cat];
+      dummy.position.set(x, h/2, z);
+      dummy.scale.set(1, h, 1);
+      dummy.updateMatrix();
+      inst.setMatrixAt(idx, dummy.matrix);
+      colorObj.setHex(catColor[cat]);
+      inst.setColorAt(idx, colorObj);
+      instCat[idx] = cat;
+      instX[idx] = x;
+      instZ[idx] = z;
+      idx++;
+    }
+  }
+  inst.instanceMatrix.needsUpdate = true;
+  inst.instanceColor.needsUpdate = true;
+
+  // Filter logic: hide instances by scaling them to 0
+  function applyFilter(filter){
+    // filter: 'all' | 'veg' | 'barren' | 'water'
+    const showCat = {
+      all: {1:1, 2:1, 3:1, 4:1},
+      veg: {2:1, 4:1},      // always keep baseline visible for context
+      barren: {3:1, 4:1},
+      water: {1:1, 4:1},
+    }[filter];
+    for (let i = 0; i < nVis; i++){
+      const cat = instCat[i];
+      const visible = showCat[cat] === 1;
+      if (visible){
+        const h = catHeight[cat];
+        dummy.position.set(instX[i], h/2, instZ[i]);
+        dummy.scale.set(1, h, 1);
+      } else {
+        dummy.position.set(instX[i], 0, instZ[i]);
+        dummy.scale.set(0, 0, 0);
+      }
+      dummy.updateMatrix();
+      inst.setMatrixAt(i, dummy.matrix);
+    }
+    inst.instanceMatrix.needsUpdate = true;
+  }
+
+  // Wire up control buttons
+  const buttons = {
+    all: document.getElementById('btn-all'),
+    veg: document.getElementById('btn-veg'),
+    barren: document.getElementById('btn-barren'),
+    water: document.getElementById('btn-water'),
+  };
+  Object.entries(buttons).forEach(([key, btn]) => {
+    btn.addEventListener('click', () => {
+      Object.values(buttons).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyFilter(key);
+    });
+  });
+
+  // Starfield
+  const sCount = 700;
+  const sGeom = new THREE.BufferGeometry();
+  const sPos = new Float32Array(sCount * 3);
+  for (let i = 0; i < sCount; i++){
+    const r = 200 + Math.random() * 250;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const theta = Math.random() * Math.PI * 2;
+    sPos[i*3] = r * Math.sin(phi) * Math.cos(theta);
+    sPos[i*3+1] = Math.abs(r * Math.cos(phi)) * 0.7 + 30;
+    sPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
+  }
+  sGeom.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+  scene.add(new THREE.Points(sGeom, new THREE.PointsMaterial({
+    color: 0x6080a0, size: 0.7, transparent: true, opacity: 0.5,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  })));
+
+  // Camera orbit (auto-rotate + drag)
+  let theta = Math.atan2(camera.position.x, camera.position.z);
+  let phi = Math.atan2(Math.sqrt(camera.position.x**2 + camera.position.z**2), camera.position.y);
+  let radius = camera.position.length();
+  let target = new THREE.Vector3(0, 5, 0);
+  let isDown = false, mouseX = 0, mouseY = 0, lastInteract = performance.now();
+  function updateCamera(){
+    camera.position.set(
+      radius * Math.sin(phi) * Math.sin(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.cos(theta)
+    ).add(target);
+    camera.lookAt(target);
+  }
+  renderer.domElement.addEventListener('mousedown', e => {
+    isDown = true; mouseX = e.clientX; mouseY = e.clientY;
+    renderer.domElement.style.cursor = 'grabbing';
+    lastInteract = performance.now();
+  });
+  window.addEventListener('mouseup', () => { isDown = false; renderer.domElement.style.cursor = 'grab'; });
+  window.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    theta -= (e.clientX - mouseX) * 0.006;
+    phi   -= (e.clientY - mouseY) * 0.006;
+    phi = Math.max(0.10, Math.min(Math.PI/2 - 0.05, phi));
+    updateCamera();
+    mouseX = e.clientX; mouseY = e.clientY;
+  });
+  renderer.domElement.addEventListener('wheel', e => {
+    e.preventDefault();
+    radius *= 1 + e.deltaY * 0.001;
+    radius = Math.max(50, Math.min(500, radius));
+    updateCamera();
+    lastInteract = performance.now();
+  }, {passive: false});
+  renderer.domElement.style.cursor = 'grab';
+
+  function animate(){
+    requestAnimationFrame(animate);
+    if (performance.now() - lastInteract > 4000){
+      theta += 0.0006;
+      updateCamera();
+    }
+    renderer.render(scene, camera);
+  }
+  animate();
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+}
+</script>
+</body></html>

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Driver-Space Bubble Race | Hyderabad Urban Growth Atlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="../libs/three.min.js"></script>
+</head>
+<body>
+
+<div class="backlink">
+  <a href="../index.html" target="_top">&#9664; Atlas</a>
+  <span class="sep">|</span>
+  <span class="number">#20</span>
+  <span class="title-here">Driver-Space Bubble Race</span>
+  <span class="spacer"></span>
+  <a class="prev" href="17_the_city_year_by_year.html">&larr; Prev</a>
+  <span class="sep">|</span>
+  <a class="next" href="19_skyline_of_age.html">Next &rarr;</a>
+</div>
+
+<div class="scene" id="scene"></div>
+
+<div class="info">
+  <div class="eyebrow">Chart 20 &middot; Time &amp; Cadence</div>
+  <h1>The centroid of new growth, <em>drifting outward</em>.</h1>
+  <p>A Hans Rosling-style race in <span class="ac">three-dimensional driver space</span>: each five-year cohort of newly-built pixels appears as a glowing bubble whose position is the cohort's mean (distance-to-center, distance-to-roads, population) z-scored. Bubble size scales with cohort population. Press play to watch the centroid trail outward as the model exhausts the easy inner frontier and reaches into peripheral land.</p>
+</div>
+
+<div class="legend" id="legend">
+  <div class="lhdr">Current Cohort</div>
+  <div id="period-display" style="font-family:'Playfair Display',serif;font-size:1.6rem;color:#FFD700;margin:8px 0;text-align:center">2020 &rarr; 2025</div>
+  <div style="border-top:1px solid #1E293B;padding-top:10px;font-size:.7rem;color:#94A3B8">
+    <div style="display:flex;justify-content:space-between;margin:4px 0"><span>Population</span><span id="n-display" style="color:#FF5872;font-weight:700">116k</span></div>
+    <div style="display:flex;justify-content:space-between;margin:4px 0"><span>dist-center z</span><span id="dc-display" style="color:#00D5E0;font-family:'JetBrains Mono',monospace">-0.92</span></div>
+    <div style="display:flex;justify-content:space-between;margin:4px 0"><span>dist-roads z</span><span id="dr-display" style="color:#00D5E0;font-family:'JetBrains Mono',monospace">-0.52</span></div>
+  </div>
+</div>
+
+<div class="controls with-analysis">
+  <button class="btn" id="play-btn" style="color:#00D5E0;border-color:#00D5E0">&#9654; Play</button>
+  <input class="scrub" id="scrub" type="range" min="0" max="5" step="1" value="0">
+  <span class="stat" id="step-stat">period 1 of 6</span>
+</div>
+
+<div class="analysis">
+  <div class="card">
+    <div class="lbl">Period 1 origin</div>
+    <span class="num pk">dc -0.92</span>
+    The first cohort sits closest to the city center than average. The model's <b>easy frontier</b>: highest-favored pixels go first.
+  </div>
+  <div class="card">
+    <div class="lbl">Period 6 destination</div>
+    <span class="num gold">dc -0.08</span>
+    Almost back to z=0 by 2050. Inner ring exhausted; growth pushed to average peripheral distances. The trail visualizes frontier exhaustion.
+  </div>
+  <div class="card">
+    <div class="lbl">Population U-shape</div>
+    <span class="num ac">116k &rarr; 87k &rarr; 147k</span>
+    Cohorts dip then climb: easy candidates consumed, then quota compounding outpaces scarcity. Population grows 27% across the simulation.
+  </div>
+  <div class="card">
+    <div class="lbl">Road affinity</div>
+    <span class="num">stable</span>
+    dist-roads z stays near -0.50 across all six periods. The major-road network reaches into peripheral areas, so road-proximity is preserved even as distance-to-center grows.
+  </div>
+</div>
+
+<script>
+fetch('../data.json').then(r => r.json()).then(d => initChart(d));
+
+function initChart(D){
+  const C = D.spatial.growth_cohorts.cohorts;
+  const N = C.length;  // 6 cohorts
+  const periodLabels = C.map(c => `${c.from_year} \u2192 ${c.to_year}`);
+  const periodColors = [0xff5872, 0xff7a48, 0xffaa30, 0xffd700, 0x9aa830, 0x5a8a30];
+
+  // 3D coordinates for each cohort: x = dist_center_z, y = dist_roads_z, z = period index (time axis)
+  // Population determines bubble size
+  // Use full population range for sizing
+  const ns = C.map(c => c.n_pixels);
+  const sMin = Math.min(...ns), sMax = Math.max(...ns);
+  function sizeFor(n){ return 0.6 + 1.4 * (n - sMin) / (sMax - sMin); }
+
+  // World-space layout: x = dist_center scaled, y = dist_roads scaled, z = period * spacing
+  const xs = C.map(c => c.mean_dist_center_z * 8);   // scale z-scores up
+  const ys = C.map(c => c.mean_dist_roads_z * 8);    // negative usually
+  const zs = C.map((c, i) => -10 + i * 4);            // time axis (back to front)
+
+  const renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x06080F);
+  document.getElementById('scene').appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x06080F, 0.0063);
+  const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 500);
+  camera.position.set(18, 14, 22);
+  camera.lookAt(0, 0, 0);
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const key = new THREE.PointLight(0xffffff, 0.7, 80);
+  key.position.set(15, 20, 15);
+  scene.add(key);
+  const accent = new THREE.PointLight(0x00d5e0, 0.5, 60);
+  accent.position.set(-12, 8, -12);
+  scene.add(accent);
+
+  // Coordinate frame: 3 axes with labels
+  // X axis (dist-center)
+  function makeAxis(start, end, color){
+    const geom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(...start), new THREE.Vector3(...end),
+    ]);
+    return new THREE.Line(geom, new THREE.LineBasicMaterial({color, transparent:true, opacity:0.5}));
+  }
+  scene.add(makeAxis([-12, 0, -12], [12, 0, -12], 0x00d5e0));
+  scene.add(makeAxis([-12, -10, -12], [-12, 10, -12], 0xff5872));
+  scene.add(makeAxis([-12, 0, -12], [-12, 0, 14], 0xffd700));
+
+  // Grid floor at y=-8
+  const grid = new THREE.GridHelper(28, 14, 0x1E293B, 0x111827);
+  grid.position.set(0, -8, 0);
+  scene.add(grid);
+
+  // Axis labels (sprites)
+  function addLabel(text, pos, color){
+    const cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 64;
+    const cx = cv.getContext('2d');
+    cx.fillStyle = color;
+    cx.font = '500 24px JetBrains Mono, monospace';
+    cx.textAlign = 'center';
+    cx.fillText(text, 128, 38);
+    const tex = new THREE.CanvasTexture(cv);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+    sp.position.set(...pos);
+    sp.scale.set(4, 1, 1);
+    scene.add(sp);
+  }
+  addLabel('dist-center z', [13.5, 0, -12], '#00D5E0');
+  addLabel('dist-roads z', [-12, 11, -12], '#FF5872');
+  addLabel('time \u2192', [-12, 0, 15.5], '#FFD700');
+
+  // Axis tick marks at 0
+  const zeroPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(24, 24),
+    new THREE.MeshBasicMaterial({color: 0x00d5e0, transparent:true, opacity:0.04, side:THREE.DoubleSide}),
+  );
+  zeroPlane.position.set(0, 0, 0);
+  zeroPlane.rotation.y = 0;
+  scene.add(zeroPlane);
+
+  // Trail: line through all cohort centroids (faint, builds up as we play)
+  const trailPositions = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++){
+    trailPositions[i*3]     = xs[i];
+    trailPositions[i*3 + 1] = ys[i];
+    trailPositions[i*3 + 2] = zs[i];
+  }
+  const trailGeom = new THREE.BufferGeometry();
+  trailGeom.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+  trailGeom.setDrawRange(0, 1);  // start with just first point
+  const trailLine = new THREE.Line(trailGeom, new THREE.LineBasicMaterial({color:0x00d5e0, transparent:true, opacity:0.65}));
+  scene.add(trailLine);
+
+  // Past-cohort small bubbles (shown as we progress)
+  const pastBubbles = [];
+  for (let i = 0; i < N; i++){
+    const m = new THREE.Mesh(
+      new THREE.SphereGeometry(0.3, 16, 12),
+      new THREE.MeshBasicMaterial({color: periodColors[i], transparent:true, opacity:0}),
+    );
+    m.position.set(xs[i], ys[i], zs[i]);
+    scene.add(m);
+    pastBubbles.push(m);
+  }
+
+  // Current cohort: big glowing bubble
+  const currentBubble = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 32, 24),
+    new THREE.MeshBasicMaterial({color: periodColors[0]}),
+  );
+  currentBubble.position.set(xs[0], ys[0], zs[0]);
+  scene.add(currentBubble);
+
+  // Halo sprite for current bubble
+  function makeHaloTex(color){
+    const cv = document.createElement('canvas');
+    cv.width = 128; cv.height = 128;
+    const cx = cv.getContext('2d');
+    const grad = cx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grad.addColorStop(0, color + 'cc');
+    grad.addColorStop(0.4, color + '44');
+    grad.addColorStop(1, color + '00');
+    cx.fillStyle = grad;
+    cx.fillRect(0, 0, 128, 128);
+    return new THREE.CanvasTexture(cv);
+  }
+  const haloMat = new THREE.SpriteMaterial({
+    map: makeHaloTex('#ff5872'),
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const halo = new THREE.Sprite(haloMat);
+  halo.position.copy(currentBubble.position);
+  halo.scale.set(8, 8, 1);
+  scene.add(halo);
+
+  // Particle ring around current bubble
+  const PCOUNT = 200;
+  const ringPos = new Float32Array(PCOUNT * 3);
+  const ringVel = new Float32Array(PCOUNT * 3);
+  for (let i = 0; i < PCOUNT; i++){
+    const theta = (i / PCOUNT) * Math.PI * 2;
+    const r = 1.4 + Math.random() * 0.6;
+    ringPos[i*3]     = currentBubble.position.x + r * Math.cos(theta);
+    ringPos[i*3 + 1] = currentBubble.position.y + (Math.random() - 0.5) * 0.5;
+    ringPos[i*3 + 2] = currentBubble.position.z + r * Math.sin(theta);
+    ringVel[i*3]     = -Math.sin(theta) * 0.02;
+    ringVel[i*3 + 1] = (Math.random() - 0.5) * 0.005;
+    ringVel[i*3 + 2] = Math.cos(theta) * 0.02;
+  }
+  const ringGeom = new THREE.BufferGeometry();
+  ringGeom.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
+  // soft point texture
+  const ptCanvas = document.createElement('canvas');
+  ptCanvas.width = 32; ptCanvas.height = 32;
+  const ptCtx = ptCanvas.getContext('2d');
+  const pg = ptCtx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  pg.addColorStop(0, 'rgba(255,255,255,1)');
+  pg.addColorStop(1, 'rgba(255,255,255,0)');
+  ptCtx.fillStyle = pg;
+  ptCtx.fillRect(0, 0, 32, 32);
+  const ringMat = new THREE.PointsMaterial({
+    map: new THREE.CanvasTexture(ptCanvas),
+    color: 0xffffff,
+    size: 0.25, transparent: true, opacity: 0.6,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const ringPoints = new THREE.Points(ringGeom, ringMat);
+  scene.add(ringPoints);
+
+  // Period label sprite (year display in 3D, anchored above bubble)
+  let periodLabelSprite = null;
+  function setPeriodLabel(idx){
+    if (periodLabelSprite) scene.remove(periodLabelSprite);
+    const cv = document.createElement('canvas');
+    cv.width = 384; cv.height = 96;
+    const cx = cv.getContext('2d');
+    cx.fillStyle = '#FFD700';
+    cx.font = 'italic 700 38px Playfair Display, serif';
+    cx.textAlign = 'center';
+    cx.fillText(periodLabels[idx], 192, 60);
+    const tex = new THREE.CanvasTexture(cv);
+    periodLabelSprite = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+    periodLabelSprite.position.set(xs[idx], ys[idx] + 2.6, zs[idx]);
+    periodLabelSprite.scale.set(6, 1.5, 1);
+    scene.add(periodLabelSprite);
+  }
+  setPeriodLabel(0);
+
+  // Starfield
+  const sCount = 800;
+  const sGeom = new THREE.BufferGeometry();
+  const sPos = new Float32Array(sCount * 3);
+  for (let i = 0; i < sCount; i++){
+    const r = 60 + Math.random() * 100;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const theta = Math.random() * Math.PI * 2;
+    sPos[i*3]     = r * Math.sin(phi) * Math.cos(theta);
+    sPos[i*3 + 1] = r * Math.cos(phi);
+    sPos[i*3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+  }
+  sGeom.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+  scene.add(new THREE.Points(sGeom, new THREE.PointsMaterial({
+    color: 0x6080a0, size: 0.6, transparent: true, opacity: 0.4,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  })));
+
+  // Apply step
+  let currentStep = 0;
+  function applyStep(n, animated){
+    currentStep = n;
+    const c = C[n];
+    // Update HUD
+    document.getElementById('period-display').textContent = periodLabels[n];
+    document.getElementById('n-display').textContent =
+      c.n_pixels >= 1000 ? Math.round(c.n_pixels/1000) + 'k' : c.n_pixels;
+    document.getElementById('dc-display').textContent = c.mean_dist_center_z.toFixed(2);
+    document.getElementById('dr-display').textContent = c.mean_dist_roads_z.toFixed(2);
+    document.getElementById('step-stat').textContent = `period ${n+1} of 6`;
+    document.getElementById('scrub').value = n;
+    // Update current bubble
+    currentBubble.material.color.setHex(periodColors[n]);
+    const sz = sizeFor(c.n_pixels);
+    currentBubble.scale.set(sz, sz, sz);
+    currentBubble.position.set(xs[n], ys[n], zs[n]);
+    // Halo
+    const colorHex = '#' + periodColors[n].toString(16).padStart(6,'0');
+    halo.material.map = makeHaloTex(colorHex);
+    halo.material.needsUpdate = true;
+    halo.position.copy(currentBubble.position);
+    halo.scale.set(sz * 6, sz * 6, 1);
+    // Reveal past bubbles up to n
+    pastBubbles.forEach((b, i) => {
+      b.material.opacity = (i < n) ? 0.5 : 0;
+    });
+    // Trail extends
+    trailGeom.setDrawRange(0, n + 1);
+    // Period label
+    setPeriodLabel(n);
+  }
+  applyStep(0);
+
+  // Camera orbit
+  let theta = Math.atan2(camera.position.x, camera.position.z);
+  let phi = Math.atan2(Math.sqrt(camera.position.x**2 + camera.position.z**2), camera.position.y);
+  let radius = camera.position.length();
+  let target = new THREE.Vector3(0, 0, 0);
+  let isDown = false, mouseX = 0, mouseY = 0;
+  function updateCamera(){
+    camera.position.set(
+      radius * Math.sin(phi) * Math.sin(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.cos(theta)
+    ).add(target);
+    camera.lookAt(target);
+  }
+  renderer.domElement.addEventListener('mousedown', e => {
+    isDown = true; mouseX = e.clientX; mouseY = e.clientY;
+    renderer.domElement.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => { isDown = false; renderer.domElement.style.cursor = 'grab'; });
+  window.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    theta -= (e.clientX - mouseX) * 0.006;
+    phi   -= (e.clientY - mouseY) * 0.006;
+    phi = Math.max(0.10, Math.min(Math.PI/2 - 0.05, phi));
+    updateCamera();
+    mouseX = e.clientX; mouseY = e.clientY;
+  });
+  renderer.domElement.addEventListener('wheel', e => {
+    e.preventDefault();
+    radius *= 1 + e.deltaY * 0.001;
+    radius = Math.max(15, Math.min(80, radius));
+    updateCamera();
+  }, {passive: false});
+  renderer.domElement.style.cursor = 'grab';
+
+  // Play / scrub
+  let playing = false, timer = null;
+  const playBtn = document.getElementById('play-btn');
+  const scrub = document.getElementById('scrub');
+  function step(){
+    const next = (currentStep + 1) % 6;
+    applyStep(next);
+    if (next === 5){
+      playing = false;
+      playBtn.innerHTML = '&#8634; Replay';
+      clearInterval(timer);
+    }
+  }
+  function startPlay(){
+    if (currentStep === 5) currentStep = 0;
+    applyStep(currentStep);
+    playing = true;
+    playBtn.innerHTML = '&#10074;&#10074; Pause';
+    timer = setInterval(step, 1500);
+  }
+  function pausePlay(){
+    playing = false;
+    playBtn.innerHTML = '&#9654; Play';
+    if (timer) clearInterval(timer);
+  }
+  playBtn.addEventListener('click', () => { if (playing) pausePlay(); else startPlay(); });
+  scrub.addEventListener('input', e => { pausePlay(); applyStep(parseInt(e.target.value)); });
+
+  // Animate
+  function animate(){
+    requestAnimationFrame(animate);
+    // Slow auto-orbit when idle
+    if (!isDown){
+      theta += 0.0008;
+      updateCamera();
+    }
+    // Update particle ring (rotate around current bubble)
+    const cx = currentBubble.position.x, cy = currentBubble.position.y, cz = currentBubble.position.z;
+    for (let i = 0; i < PCOUNT; i++){
+      // Rotate around vertical axis through bubble
+      const px = ringPos[i*3] - cx;
+      const pz = ringPos[i*3 + 2] - cz;
+      const ang = 0.025;
+      const nx = px * Math.cos(ang) - pz * Math.sin(ang);
+      const nz = px * Math.sin(ang) + pz * Math.cos(ang);
+      ringPos[i*3]     = nx + cx;
+      ringPos[i*3 + 2] = nz + cz;
+      // Slight vertical drift
+      ringPos[i*3 + 1] += ringVel[i*3 + 1];
+      if (Math.abs(ringPos[i*3 + 1] - cy) > 0.6){
+        ringVel[i*3 + 1] *= -1;
+      }
+    }
+    ringGeom.attributes.position.needsUpdate = true;
+    // Pulse bubble subtly
+    const t = performance.now() * 0.003;
+    const pulse = 1 + 0.05 * Math.sin(t);
+    currentBubble.scale.setScalar(sizeFor(C[currentStep].n_pixels) * pulse);
+    renderer.render(scene, camera);
+  }
+  animate();
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+}
+</script>
+</body></html>

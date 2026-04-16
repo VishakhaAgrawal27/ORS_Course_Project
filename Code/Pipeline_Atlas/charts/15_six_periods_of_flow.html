@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Six Periods of Flow | Hyderabad Urban Growth Atlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="../libs/three.min.js"></script>
+</head>
+<body>
+
+<div class="backlink">
+  <a href="../index.html" target="_top">&#9664; Atlas</a>
+  <span class="sep">|</span>
+  <span class="number">#15</span>
+  <span class="title-here">Six Periods of Flow</span>
+  <span class="spacer"></span>
+  <a class="prev" href="11_the_sigmoid_of_fate.html">&larr; Prev</a>
+  <span class="sep">|</span>
+  <a class="next" href="09_the_transition_matrix.html">Next &rarr;</a>
+</div>
+
+<div class="scene" id="scene"></div>
+
+<div class="info">
+  <div class="eyebrow">Chart 15 &middot; Spatial Reveals</div>
+  <h1>Six five-year flows, <em>stacked through time</em>.</h1>
+  <p>Each translucent slab is one of the six prediction periods (2020 to 2025, 2025 to 2030, etc.) viewed as a layered Sankey. Within each slab, four left columns are the period's source classes; four right columns are the destination classes. <span class="ac">Particle streams</span> flow between them, colored by class. Press play to advance through the periods one at a time, or scroll back to see all six together.</p>
+</div>
+
+<div class="legend">
+  <div class="lhdr">Class</div>
+  <div class="li"><div class="ld" style="background:#1b88c4"></div>Water</div>
+  <div class="li"><div class="ld" style="background:#4caf6e"></div>Vegetation</div>
+  <div class="li"><div class="ld" style="background:#d49a3a"></div>Barren</div>
+  <div class="li"><div class="ld" style="background:#FF5872"></div>Built</div>
+  <div class="lf">Drag to orbit &middot; play to advance period</div>
+</div>
+
+<div class="controls with-analysis">
+  <button class="btn" id="play-btn" style="color:#00D5E0;border-color:#00D5E0">&#9654; Play</button>
+  <input class="scrub" id="scrub" type="range" min="0" max="6" step="1" value="6">
+  <span class="stat" id="step-stat">all 6 periods visible</span>
+</div>
+
+<div class="analysis">
+  <div class="card">
+    <div class="lbl">Period growth</div>
+    <span class="num pk">+12.0%</span>
+    Each successive period adds 12% more new built-up than the last. The CA's quota is compounded per period; visible as growing flow widths in later slabs.
+  </div>
+  <div class="card">
+    <div class="lbl">Per-period built additions</div>
+    <span class="num">81.5 km&sup2;</span>
+    Average over the six periods. The first adds 64 km<sup>2</sup>, the last 124 km<sup>2</sup> &mdash; almost double.
+  </div>
+  <div class="card">
+    <div class="lbl">Vegetation depletion</div>
+    <span class="num gold">-275 km&sup2;</span>
+    Cumulative loss of vegetation across all six periods (A2 trajectory, 2020 to 2050). Visible as the green-to-red flow widening as you advance.
+  </div>
+  <div class="card">
+    <div class="lbl">Stable barren</div>
+    <span class="num">~30 km&sup2;</span>
+    Each period leaves only a small barren-to-barren diagonal. Most barren land that survives one period gets consumed in the next.
+  </div>
+</div>
+
+<script>
+fetch('../data.json').then(r => r.json()).then(d => initChart(d));
+
+function initChart(D){
+  const T = D.spatial.full_transitions_periods_km2;
+  const periods = T.periods;
+  const N = periods.length;  // 6
+  const classes = T.classes;
+  const classNames = ['Water', 'Veg', 'Barren', 'Built'];
+  const classColors = [0x1b88c4, 0x4caf6e, 0xd49a3a, 0xff5872];
+
+  const renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x06080F);
+  document.getElementById('scene').appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x06080F, 0.0042);
+  const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 500);
+  camera.position.set(45, 25, 45);
+  camera.lookAt(0, 5, 0);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.85);
+  dl.position.set(20, 30, 20);
+  scene.add(dl);
+  scene.add(new THREE.PointLight(0x00d5e0, 0.4, 80));
+
+  // Ground
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(120, 80),
+    new THREE.MeshLambertMaterial({color: 0x0A0F1A})
+  );
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+  const grid = new THREE.GridHelper(80, 16, 0x1E293B, 0x111827);
+  grid.position.y = 0.02;
+  scene.add(grid);
+
+  // Layout: each period is a slab in z-direction
+  // For each slab: 4 source pillars on left (x=-12), 4 dest pillars on right (x=12)
+  // Slabs separated by SLAB_DZ
+  const SLAB_DZ = 8;
+  const Z_BASE = -SLAB_DZ * (N - 1) / 2;  // center the stack of slabs
+  const SOURCE_X = -10, DEST_X = 10;
+  const ROW_DY = 1.4;   // vertical spacing between class rows within a slab
+  const HEIGHT_SCALE = 0.04;
+  const PILLAR_W = 1.0, PILLAR_D = 1.4;
+
+  // We build all slabs but control visibility through opacity/scale per-step
+  const slabGroups = [];   // each entry: {group, particles[], pillars[]}
+  const allParticleObjs = [];
+
+  // Soft point texture (one shared)
+  const ptCanvas = document.createElement('canvas');
+  ptCanvas.width = 32; ptCanvas.height = 32;
+  const ptCtx = ptCanvas.getContext('2d');
+  const pg = ptCtx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  pg.addColorStop(0, 'rgba(255,255,255,1)');
+  pg.addColorStop(0.5, 'rgba(255,255,255,0.5)');
+  pg.addColorStop(1, 'rgba(255,255,255,0)');
+  ptCtx.fillStyle = pg;
+  ptCtx.fillRect(0, 0, 32, 32);
+  const ptTex = new THREE.CanvasTexture(ptCanvas);
+
+  for (let p = 0; p < N; p++){
+    const period = periods[p];
+    const M = period.matrix_km2;
+    const slabZ = Z_BASE + p * SLAB_DZ;
+    const group = new THREE.Group();
+
+    // Source totals + dest totals for this period
+    const srcTotals = M.map(row => row.reduce((a,b) => a+b, 0));
+    const dstTotals = [0,0,0,0];
+    for (let i = 0; i < 4; i++)
+      for (let j = 0; j < 4; j++)
+        dstTotals[j] += M[i][j];
+
+    // 4 source pillars (left)
+    for (let i = 0; i < 4; i++){
+      const y = (i - 1.5) * ROW_DY * 1.6 + 6;
+      const w = Math.max(0.8, srcTotals[i] * HEIGHT_SCALE * 0.05);   // visual cue: wider = more
+      const h = Math.max(0.5, srcTotals[i] * HEIGHT_SCALE);
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(PILLAR_W, h, PILLAR_D),
+        new THREE.MeshPhongMaterial({color: classColors[i], emissive: classColors[i], emissiveIntensity:0.6, transparent:true, opacity: 0.95}),
+      );
+      box.position.set(SOURCE_X, y, slabZ);
+      group.add(box);
+    }
+    // 4 dest pillars (right)
+    for (let j = 0; j < 4; j++){
+      const y = (j - 1.5) * ROW_DY * 1.6 + 6;
+      const h = Math.max(0.5, dstTotals[j] * HEIGHT_SCALE);
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(PILLAR_W, h, PILLAR_D),
+        new THREE.MeshPhongMaterial({color: classColors[j], emissive: classColors[j], emissiveIntensity:0.6, transparent:true, opacity: 0.95}),
+      );
+      box.position.set(DEST_X, y, slabZ);
+      group.add(box);
+    }
+    // Period label sprite (in 3D, in front of the slab)
+    const cv = document.createElement('canvas');
+    cv.width = 384; cv.height = 96;
+    const cx = cv.getContext('2d');
+    cx.fillStyle = '#FFD700';
+    cx.font = 'italic 700 36px Playfair Display, serif';
+    cx.textAlign = 'center';
+    cx.fillText(`${period.from_year} \u2192 ${period.to_year}`, 192, 60);
+    const tex = new THREE.CanvasTexture(cv);
+    const labelSp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+    labelSp.position.set(0, 14, slabZ);
+    labelSp.scale.set(7, 1.8, 1);
+    group.add(labelSp);
+
+    // Particle flows for this period (only flows >= 5 km^2 to keep visual clean)
+    const slabParticles = [];
+    for (let i = 0; i < 4; i++){
+      for (let j = 0; j < 4; j++){
+        const v = M[i][j];
+        if (v < 5) continue;
+        const startY = (i - 1.5) * ROW_DY * 1.6 + 6;
+        const endY = (j - 1.5) * ROW_DY * 1.6 + 6;
+        const startPos = new THREE.Vector3(SOURCE_X + PILLAR_W/2, startY, slabZ);
+        const endPos = new THREE.Vector3(DEST_X - PILLAR_W/2, endY, slabZ);
+        const mid = new THREE.Vector3(0, Math.max(startY, endY) + 1.5, slabZ);
+        const curve = new THREE.QuadraticBezierCurve3(startPos, mid, endPos);
+        const NP = Math.max(4, Math.floor(v / 8));
+        const flowColor = i === j ? classColors[i] : classColors[j];
+        for (let k = 0; k < NP; k++){
+          slabParticles.push({
+            curve, t: k / NP,
+            speed: 0.0025 + Math.random() * 0.0015,
+            color: flowColor, slab: p,
+          });
+        }
+      }
+    }
+
+    scene.add(group);
+    slabGroups.push({group, particles: slabParticles, slabZ});
+    allParticleObjs.push(...slabParticles);
+  }
+
+  // Single Points object for ALL particles, color-mapped
+  const PCOUNT = allParticleObjs.length;
+  const partPos = new Float32Array(PCOUNT * 3);
+  const partCol = new Float32Array(PCOUNT * 3);
+  const partOpac = new Float32Array(PCOUNT);   // controls visibility per slab
+  const tmpC = new THREE.Color();
+  for (let p = 0; p < PCOUNT; p++){
+    const pa = allParticleObjs[p];
+    const pt = pa.curve.getPoint(pa.t);
+    partPos[p*3] = pt.x; partPos[p*3+1] = pt.y; partPos[p*3+2] = pt.z;
+    tmpC.setHex(pa.color);
+    partCol[p*3] = tmpC.r; partCol[p*3+1] = tmpC.g; partCol[p*3+2] = tmpC.b;
+    partOpac[p] = 1;
+  }
+  const partGeom = new THREE.BufferGeometry();
+  partGeom.setAttribute('position', new THREE.BufferAttribute(partPos, 3));
+  partGeom.setAttribute('color', new THREE.BufferAttribute(partCol, 3));
+  const partMat = new THREE.PointsMaterial({
+    map: ptTex, vertexColors: true, size: 0.5,
+    transparent: true, opacity: 0.85,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+    sizeAttenuation: true,
+  });
+  scene.add(new THREE.Points(partGeom, partMat));
+
+  // Step controls: 0..N-1 = single period, N = all periods
+  let currentStep = N;  // start showing all
+  const stepStat = document.getElementById('step-stat');
+  const scrub = document.getElementById('scrub');
+  const playBtn = document.getElementById('play-btn');
+  function applyStep(n){
+    currentStep = n;
+    slabGroups.forEach((sg, idx) => {
+      const visible = (n === N) || (idx === n);
+      sg.group.children.forEach(c => {
+        if (c.material){
+          c.material.opacity = visible ? (c.material.userData?.baseOpacity ?? 0.95) : 0.05;
+          if ('transparent' in c.material) c.material.transparent = true;
+        }
+      });
+      // Particle visibility
+      sg.particles.forEach(pa => { pa.visible = visible; });
+    });
+    if (n === N){
+      stepStat.textContent = 'all 6 periods visible';
+    } else {
+      stepStat.textContent = `${periods[n].from_year} \u2192 ${periods[n].to_year}`;
+    }
+    scrub.value = n;
+  }
+  applyStep(N);
+
+  // Camera orbit
+  let theta = Math.atan2(camera.position.x, camera.position.z);
+  let phi = Math.atan2(Math.sqrt(camera.position.x**2 + camera.position.z**2), camera.position.y);
+  let radius = camera.position.length();
+  let target = new THREE.Vector3(0, 5, 0);
+  let isDown = false, mouseX = 0, mouseY = 0;
+  function updateCamera(){
+    camera.position.set(
+      radius * Math.sin(phi) * Math.sin(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.cos(theta)
+    ).add(target);
+    camera.lookAt(target);
+  }
+  renderer.domElement.addEventListener('mousedown', e => {
+    isDown = true; mouseX = e.clientX; mouseY = e.clientY;
+    renderer.domElement.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => { isDown = false; renderer.domElement.style.cursor = 'grab'; });
+  window.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    theta -= (e.clientX - mouseX) * 0.006;
+    phi   -= (e.clientY - mouseY) * 0.006;
+    phi = Math.max(0.10, Math.min(Math.PI/2 - 0.05, phi));
+    updateCamera();
+    mouseX = e.clientX; mouseY = e.clientY;
+  });
+  renderer.domElement.addEventListener('wheel', e => {
+    e.preventDefault();
+    radius *= 1 + e.deltaY * 0.001;
+    radius = Math.max(25, Math.min(120, radius));
+    updateCamera();
+  }, {passive: false});
+  renderer.domElement.style.cursor = 'grab';
+
+  // Play
+  let playing = false, timer = null;
+  function step(){
+    let next = currentStep + 1;
+    if (next > N){ next = 0; }
+    applyStep(next);
+    if (next === N){
+      playing = false;
+      playBtn.innerHTML = '&#8634; Replay';
+      clearInterval(timer);
+    }
+  }
+  function startPlay(){
+    if (currentStep === N) currentStep = -1;
+    playing = true;
+    playBtn.innerHTML = '&#10074;&#10074; Pause';
+    step();
+    timer = setInterval(step, 1500);
+  }
+  function pausePlay(){
+    playing = false;
+    playBtn.innerHTML = '&#9654; Play';
+    if (timer) clearInterval(timer);
+  }
+  playBtn.addEventListener('click', () => { if (playing) pausePlay(); else startPlay(); });
+  scrub.addEventListener('input', e => { pausePlay(); applyStep(parseInt(e.target.value)); });
+
+  // Animate
+  function animate(){
+    requestAnimationFrame(animate);
+    if (!isDown){
+      theta += 0.0007;
+      updateCamera();
+    }
+    // Particles flow
+    for (let p = 0; p < PCOUNT; p++){
+      const pa = allParticleObjs[p];
+      pa.t += pa.speed;
+      if (pa.t > 1) pa.t = 0;
+      if (pa.visible !== false){
+        const pt = pa.curve.getPoint(pa.t);
+        partPos[p*3] = pt.x; partPos[p*3+1] = pt.y; partPos[p*3+2] = pt.z;
+      } else {
+        // Hide by moving offscreen
+        partPos[p*3+1] = -1000;
+      }
+    }
+    partGeom.attributes.position.needsUpdate = true;
+    renderer.render(scene, camera);
+  }
+  animate();
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+}
+</script>
+</body></html>

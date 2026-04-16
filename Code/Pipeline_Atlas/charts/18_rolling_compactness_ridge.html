@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rolling Compactness Ridge | Hyderabad Urban Growth Atlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="../libs/three.min.js"></script>
+</head>
+<body>
+
+<div class="backlink">
+  <a href="../index.html" target="_top">&#9664; Atlas</a>
+  <span class="sep">|</span>
+  <span class="number">#18</span>
+  <span class="title-here">Rolling Compactness Ridge</span>
+  <span class="spacer"></span>
+  <a class="prev" href="16_scenario_similarity_chord.html">&larr; Prev</a>
+  <span class="sep">|</span>
+  <a class="next" href="13_conservation_vs_boom.html">Next &rarr;</a>
+</div>
+
+<div class="scene" id="scene"></div>
+
+<div class="info">
+  <div class="eyebrow">Chart 18 &middot; Scenario Sweep</div>
+  <h1>How fragmented does each scenario stay <em>over time</em>?</h1>
+  <p>Each glowing ribbon traces one scenario from its 2030 compactness (back of stage) to its 2040 compactness (front). All ribbons slope downward: every scenario consolidates as the simulation runs. Steeper ribbons = scenarios with more dramatic patch merging. Color = parameter family. The visual story is uniformity: <em>every</em> scenario tightens; the cellular automaton's neighborhood weight enforces consolidation regardless of which other parameters move.</p>
+</div>
+
+<div class="legend">
+  <div class="lhdr">Family</div>
+  <div class="li"><div class="ld" style="background:#00D5E0"></div>Omega (5 ribbons)</div>
+  <div class="li"><div class="ld" style="background:#4caf6e"></div>Alpha (3 ribbons)</div>
+  <div class="li"><div class="ld" style="background:#FF5872"></div>Rate (3 ribbons)</div>
+  <div class="li"><div class="ld" style="background:#FFD700"></div>Hand-tuned (6 ribbons)</div>
+  <div class="lf">Drag to orbit &middot; hover ribbon</div>
+</div>
+
+<div class="analysis">
+  <div class="card">
+    <div class="lbl">Largest absolute drop</div>
+    <span class="num gold">slow_sprawl</span>
+    443 to 224 (Δ = -219). Started fragmented, ended consolidated. The most dramatic ribbon arc in the scene.
+  </div>
+  <div class="card">
+    <div class="lbl">Smallest drop</div>
+    <span class="num pk">rate_0.035</span>
+    165 to 33 (Δ = -133). Already started 2030 highly consolidated; less compactness left to lose. Compact across the board.
+  </div>
+  <div class="card">
+    <div class="lbl">Universal direction</div>
+    <span class="num ac">17 / 17</span>
+    Every scenario consolidates from 2030 to 2040. None fragment. The CA's neighborhood weight enforces a one-way path.
+  </div>
+  <div class="card">
+    <div class="lbl">Mean reduction</div>
+    <span class="num">-179</span>
+    Average compactness drop from 2030 to 2040 across all 17 scenarios. The model converges over time toward more compact urban shapes.
+  </div>
+</div>
+
+<script>
+fetch('../data.json').then(r => r.json()).then(d => initChart(d));
+
+function initChart(D){
+  const A9 = D.canonical.A9_scenarios_17;
+
+  function family(name){
+    if (name.startsWith('omega_')) return 'omega';
+    if (name.startsWith('alpha_')) return 'alpha';
+    if (name.startsWith('rate_')) return 'rate';
+    return 'tuned';
+  }
+  const familyColor = { omega: 0x00D5E0, alpha: 0x4caf6e, rate: 0xFF5872, tuned: 0xFFD700 };
+  const familyHex = { omega: '#00D5E0', alpha: '#4caf6e', rate: '#FF5872', tuned: '#FFD700' };
+
+  const renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x06080F);
+  document.getElementById('scene').appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x06080F, 0.0042);
+  const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 500);
+  camera.position.set(40, 24, 32);
+  camera.lookAt(0, 8, 0);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const key = new THREE.DirectionalLight(0xffffff, 0.85);
+  key.position.set(20, 30, 20);
+  scene.add(key);
+  scene.add(new THREE.PointLight(0x00d5e0, 0.4, 80));
+  scene.add(new THREE.PointLight(0xff5872, 0.3, 80));
+
+  // Ground + grid
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(80, 50),
+    new THREE.MeshLambertMaterial({color: 0x0A0F1A})
+  );
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+  const grid = new THREE.GridHelper(60, 12, 0x1E293B, 0x111827);
+  grid.position.y = 0.02;
+  scene.add(grid);
+
+  // Each scenario gets a "stage slot" along the X axis
+  // Z axis = time (back = 2030, front = 2040)
+  // Y = compactness (height)
+  const HEIGHT_SCALE = 0.04;   // 200 compactness -> 8 world units
+  const N = A9.length;
+  const X_SPACING = 2.4;
+  const Z_BACK = -7, Z_FRONT = 7;
+
+  const ribbons = [];
+
+  A9.forEach((s, i) => {
+    const x = (i - (N-1)/2) * X_SPACING;
+    const fam = family(s.name);
+    const col = familyColor[fam];
+    const colHex = familyHex[fam];
+    const h2030 = s.compact2030 * HEIGHT_SCALE;
+    const h2040 = s.compact2040 * HEIGHT_SCALE;
+
+    // Build a quadrilateral ribbon from (x-w, 0, Z_BACK) -> (x+w, 0, Z_BACK) -> (x+w, h2040, Z_FRONT) -> (x-w, h2030, Z_FRONT)
+    // Actually we want a 3D ribbon connecting two columns: back column at h2030, front column at h2040
+    // Build as a plane mesh with vertical bars at both ends
+    const w = 0.7;
+    // Back pillar at 2030
+    const backPillar = new THREE.Mesh(
+      new THREE.BoxGeometry(w * 1.4, h2030, 0.5),
+      new THREE.MeshPhongMaterial({color: col, emissive: col, emissiveIntensity:0.6, shininess:60}),
+    );
+    backPillar.position.set(x, h2030/2, Z_BACK);
+    backPillar.userData = {scenario: s, year: 2030, compact: s.compact2030, fam};
+    scene.add(backPillar);
+    // Front pillar at 2040
+    const frontPillar = new THREE.Mesh(
+      new THREE.BoxGeometry(w * 1.4, h2040, 0.5),
+      new THREE.MeshPhongMaterial({color: col, emissive: col, emissiveIntensity:0.45, shininess:60}),
+    );
+    frontPillar.position.set(x, h2040/2, Z_FRONT);
+    frontPillar.userData = {scenario: s, year: 2040, compact: s.compact2040, fam};
+    scene.add(frontPillar);
+
+    // Ribbon: a quad bridging the two pillar tops, slightly tilted
+    // Build via custom geometry: 4 vertices forming the slanted ribbon plane
+    const ribGeom = new THREE.BufferGeometry();
+    const verts = new Float32Array([
+      x - w, 0,      Z_BACK,
+      x + w, 0,      Z_BACK,
+      x + w, h2040,  Z_FRONT,
+      x - w, h2040,  Z_FRONT,
+      x - w, h2030,  Z_BACK,
+      x + w, h2030,  Z_BACK,
+    ]);
+    // Two triangles for the top sloped face: (back top left, back top right, front top right) and (back top left, front top right, front top left)
+    const indices = [
+      4, 5, 2,    // back-top-left, back-top-right, front-top-right
+      4, 2, 3,    // back-top-left, front-top-right, front-top-left
+    ];
+    ribGeom.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    ribGeom.setIndex(indices);
+    ribGeom.computeVertexNormals();
+    const ribbon = new THREE.Mesh(ribGeom, new THREE.MeshPhongMaterial({
+      color: col, emissive: col, emissiveIntensity:0.6, shininess: 30,
+      side: THREE.DoubleSide, transparent: true, opacity: 0.55,
+    }));
+    ribbon.userData = {scenario: s, fam};
+    scene.add(ribbon);
+    ribbons.push(ribbon);
+
+    // Scenario label below front pillar (rotated slightly)
+    const cv = document.createElement('canvas');
+    cv.width = 192; cv.height = 64;
+    const cx = cv.getContext('2d');
+    cx.fillStyle = colHex;
+    cx.font = '500 22px JetBrains Mono, monospace';
+    cx.textAlign = 'center';
+    const shortName = s.name.replace('omega_', '\u03c9 ').replace('alpha_', '\u03b1 ').replace('rate_', 'r ').replace('_', ' ');
+    cx.fillText(shortName, 96, 38);
+    const tex = new THREE.CanvasTexture(cv);
+    const lbl = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+    lbl.position.set(x, -1.0, Z_FRONT + 1);
+    lbl.scale.set(2.2, 0.75, 1);
+    scene.add(lbl);
+  });
+
+  // Year labels at each end of the stage
+  function yearLabel(text, z){
+    const cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 80;
+    const cx = cv.getContext('2d');
+    cx.fillStyle = '#FFD700';
+    cx.font = 'italic 700 36px Playfair Display, serif';
+    cx.textAlign = 'center';
+    cx.fillText(text, 128, 50);
+    const tex = new THREE.CanvasTexture(cv);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+    sp.position.set(- (N-1)/2 * X_SPACING - 3, 17, z);
+    sp.scale.set(3.5, 1.1, 1);
+    scene.add(sp);
+  }
+  yearLabel('2030', Z_BACK);
+  yearLabel('2040', Z_FRONT);
+
+  // Y-axis ticks (compactness reference)
+  [50, 100, 200, 300, 400].forEach(v => {
+    const y = v * HEIGHT_SCALE;
+    const lineGeom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(- (N-1)/2 * X_SPACING - 1.5, y, Z_BACK),
+      new THREE.Vector3(  (N-1)/2 * X_SPACING + 1.5, y, Z_BACK),
+    ]);
+    scene.add(new THREE.Line(lineGeom, new THREE.LineBasicMaterial({color: 0x1E293B, transparent:true, opacity:0.6})));
+    // Label
+    const cv = document.createElement('canvas');
+    cv.width = 96; cv.height = 48;
+    const cx = cv.getContext('2d');
+    cx.fillStyle = '#94A3B8';
+    cx.font = '500 24px JetBrains Mono, monospace';
+    cx.textAlign = 'right';
+    cx.fillText(String(v), 88, 30);
+    const tex = new THREE.CanvasTexture(cv);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+    sp.position.set(- (N-1)/2 * X_SPACING - 3, y, Z_BACK);
+    sp.scale.set(1.4, 0.7, 1);
+    scene.add(sp);
+  });
+
+  // Y axis title
+  const ycv = document.createElement('canvas');
+  ycv.width = 256; ycv.height = 64;
+  const ycx = ycv.getContext('2d');
+  ycx.fillStyle = '#94A3B8';
+  ycx.font = 'italic 24px Source Sans 3, sans-serif';
+  ycx.textAlign = 'right';
+  ycx.fillText('compactness', 250, 40);
+  const ytex = new THREE.CanvasTexture(ycv);
+  const ysp = new THREE.Sprite(new THREE.SpriteMaterial({map:ytex, transparent:true, depthWrite:false}));
+  ysp.position.set(- (N-1)/2 * X_SPACING - 4, 19.5, Z_BACK);
+  ysp.scale.set(3, 0.75, 1);
+  scene.add(ysp);
+
+  // Hover on ribbons
+  const tip = document.getElementById('tip');
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  let hovered = null;
+  renderer.domElement.addEventListener('mousemove', e => {
+    mouse.x = (e.clientX / innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(ribbons);
+    if (hits.length > 0){
+      const o = hits[0].object;
+      const d = o.userData.scenario;
+      const delta = d.compact2040 - d.compact2030;
+      tip.style.display = 'block';
+      tip.style.left = (e.clientX + 14) + 'px';
+      tip.style.top = (e.clientY - 12) + 'px';
+      tip.innerHTML = `<b>${d.name.replace('_', ' ')}</b> &middot; ${o.userData.fam}<br>
+        2030 compactness: <b>${d.compact2030.toFixed(0)}</b><br>
+        2040 compactness: <b>${d.compact2040.toFixed(0)}</b><br>
+        change: <span style="color:${delta < 0 ? '#4caf6e' : '#FF5872'}">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}</span>`;
+      if (hovered && hovered !== o) hovered.material.opacity = 0.55;
+      hovered = o;
+      hovered.material.opacity = 0.95;
+    } else {
+      tip.style.display = 'none';
+      if (hovered){ hovered.material.opacity = 0.55; hovered = null; }
+    }
+  });
+
+  // Starfield
+  const sCount = 800;
+  const sGeom = new THREE.BufferGeometry();
+  const sPos = new Float32Array(sCount * 3);
+  for (let i = 0; i < sCount; i++){
+    const r = 80 + Math.random() * 100;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const theta = Math.random() * Math.PI * 2;
+    sPos[i*3] = r * Math.sin(phi) * Math.cos(theta);
+    sPos[i*3+1] = Math.abs(r * Math.cos(phi)) * 0.7 + 30;
+    sPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
+  }
+  sGeom.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+  scene.add(new THREE.Points(sGeom, new THREE.PointsMaterial({
+    color: 0x6080a0, size: 0.6, transparent: true, opacity: 0.45,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  })));
+
+  // Camera orbit
+  let theta = Math.atan2(camera.position.x, camera.position.z);
+  let phi = Math.atan2(Math.sqrt(camera.position.x**2 + camera.position.z**2), camera.position.y);
+  let radius = camera.position.length();
+  let target = new THREE.Vector3(0, 8, 0);
+  let isDown = false, mouseX = 0, mouseY = 0;
+  function updateCamera(){
+    camera.position.set(
+      radius * Math.sin(phi) * Math.sin(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.cos(theta)
+    ).add(target);
+    camera.lookAt(target);
+  }
+  renderer.domElement.addEventListener('mousedown', e => {
+    isDown = true; mouseX = e.clientX; mouseY = e.clientY;
+    renderer.domElement.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => { isDown = false; renderer.domElement.style.cursor = 'grab'; });
+  window.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    theta -= (e.clientX - mouseX) * 0.006;
+    phi   -= (e.clientY - mouseY) * 0.006;
+    phi = Math.max(0.10, Math.min(Math.PI/2 - 0.05, phi));
+    updateCamera();
+    mouseX = e.clientX; mouseY = e.clientY;
+  });
+  renderer.domElement.addEventListener('wheel', e => {
+    e.preventDefault();
+    radius *= 1 + e.deltaY * 0.001;
+    radius = Math.max(20, Math.min(120, radius));
+    updateCamera();
+  }, {passive: false});
+  renderer.domElement.style.cursor = 'grab';
+
+  function animate(){
+    requestAnimationFrame(animate);
+    if (!isDown){
+      theta += 0.0008;
+      updateCamera();
+    }
+    renderer.render(scene, camera);
+  }
+  animate();
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+}
+</script>
+</body></html>

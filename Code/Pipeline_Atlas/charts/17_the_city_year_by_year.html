@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The City, Year by Year | Hyderabad Urban Growth Atlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="../libs/three.min.js"></script>
+</head>
+<body>
+
+<div class="backlink">
+  <a href="../index.html" target="_top">&#9664; Atlas</a>
+  <span class="sep">|</span>
+  <span class="number">#17</span>
+  <span class="title-here">The City, Year by Year</span>
+  <span class="spacer"></span>
+  <a class="prev" href="01_growth_cadence_clock.html">&larr; Prev</a>
+  <span class="sep">|</span>
+  <a class="next" href="20_driver-space_bubble_race.html">Next &rarr;</a>
+</div>
+
+<div class="scene" id="scene"></div>
+
+<div class="info">
+  <div class="eyebrow">Chart 17 &middot; Time &amp; Cadence</div>
+  <h1>Watch the city <em>grow</em>, year by year.</h1>
+  <p>Press play to advance from 2020 (the dark gray baseline) through each five-year increment to 2050. Newly-built pixels rise as glowing red towers, then darken as time advances and they become "old" relative to the next cohort. The camera slowly orbits the city; the year clock counts upward. By 2050 the historic core is dwarfed by three decades of accumulated periphery.</p>
+</div>
+
+<div class="legend" id="legend">
+  <div class="lhdr">Current Frame</div>
+  <div id="year-display" style="font-family:'Playfair Display',serif;font-size:2.4rem;color:#FFD700;margin:8px 0;text-align:center">2020</div>
+  <div id="step-display" style="font-size:.7rem;color:#94A3B8;text-align:center;margin-bottom:10px">existing built-up at start</div>
+  <div style="border-top:1px solid #1E293B;padding-top:10px;font-size:.68rem;color:#64748B">
+    <div style="display:flex;justify-content:space-between;margin:3px 0"><span>Built (km&sup2;)</span><span id="km-display" style="color:#FF5872;font-weight:700">457</span></div>
+    <div style="display:flex;justify-content:space-between;margin:3px 0"><span>New this period</span><span id="new-display" style="color:#00D5E0">--</span></div>
+  </div>
+</div>
+
+<div class="controls with-analysis">
+  <button class="btn" id="play-btn" style="color:#00D5E0;border-color:#00D5E0">&#9654; Play</button>
+  <input class="scrub" id="scrub" type="range" min="0" max="6" step="1" value="0">
+  <span class="stat" id="step-stat">step 0 of 6</span>
+</div>
+
+<div class="analysis">
+  <div class="card">
+    <div class="lbl">2020 baseline</div>
+    <span class="num">457 km&sup2;</span>
+    The starting point for the simulation. Random Forest classification of Landsat 8 surface reflectance.
+  </div>
+  <div class="card">
+    <div class="lbl">2030 milestone</div>
+    <span class="num ac">+181 km&sup2;</span>
+    By 2030 the city has added the equivalent of nearly half its 2020 footprint. The visual transformation is immediate.
+  </div>
+  <div class="card">
+    <div class="lbl">2050 endpoint</div>
+    <span class="num pk">1,007 km&sup2;</span>
+    The final 2050 footprint shows the model's central finding: the city more than doubles, with most growth on what was vegetation in 2020.
+  </div>
+  <div class="card">
+    <div class="lbl">Per-period quota</div>
+    <span class="num gold">+12.0%</span>
+    Each new period the CA must place a quota of pixels compounded at 12.0% per 5-year window. The simulation never decelerates.
+  </div>
+</div>
+
+<script>
+fetch('../data.json').then(r => r.json()).then(d => initChart(d));
+
+function initChart(D){
+  const toc = D.spatial.time_of_conversion_grid_422;
+  const [H, W] = toc.shape;
+  const v = toc.values;
+
+  // Cumulative built area at each step (from histogram)
+  const hist = D.spatial.time_of_conversion_histogram;
+  const cumKm2 = [];
+  let running = 0;
+  for (let s = 1; s <= 7; s++){
+    running += hist.km2[s];
+    cumKm2.push(running);
+  }
+  // Per-period addition (km^2 added in this 5-year step)
+  const newKm2 = [0];  // step 0 = baseline, no new
+  for (let s = 1; s < 7; s++) newKm2.push(hist.km2[s + 1]);
+
+  const yearLabels = ['2020', '2025', '2030', '2035', '2040', '2045', '2050'];
+  const stepLabels = [
+    'existing built-up at start',
+    'after 5 years (2020 to 2025)',
+    'after 10 years (2020 to 2030)',
+    'after 15 years (2020 to 2035)',
+    'after 20 years (2020 to 2040)',
+    'after 25 years (2020 to 2045)',
+    'after 30 years (2020 to 2050)',
+  ];
+
+  // Color/height ramp per cohort
+  const newCohortColor = 0xff5872;     // bright red for newest
+  const ageColors = [0x3a3530, 0x4a3030, 0x5a2c2c, 0x6a2828, 0x7a2424, 0x8a2020, 0xa01a1a];
+  // Above: index = age-in-cohorts (0 = current cohort, 1 = 1 step old, ...)
+  // We'll use age to color: current cohort = bright red, older = darker
+
+  let nBuilt = 0;
+  for (let i = 0; i < v.length; i++) if (v[i] >= 1) nBuilt++;
+
+  const renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x06080F);
+  document.getElementById('scene').appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x06080F, 0.0028);
+  const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 2000);
+  camera.position.set(120, 80, 130);
+  camera.lookAt(0, 5, 0);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.85);
+  dl.position.set(80, 120, 60);
+  scene.add(dl);
+  const rim = new THREE.DirectionalLight(0x00d5e0, 0.85);
+  rim.position.set(-80, 40, -60);
+  scene.add(rim);
+
+  // Ground
+  scene.add(new THREE.Mesh(
+    new THREE.PlaneGeometry(280, 280),
+    new THREE.MeshLambertMaterial({color: 0x0A0F1A})
+  )).rotation.x = -Math.PI/2;
+  const grid = new THREE.GridHelper(220, 22, 0x1E293B, 0x111827);
+  grid.position.y = 0.05;
+  scene.add(grid);
+
+  // Build instanced mesh: every potentially-built pixel gets a slot
+  // Visibility per step is controlled by setting matrix scale=0 for hidden pixels.
+  const cellSize = 0.5;
+  const boxGeom = new THREE.BoxGeometry(cellSize, 1, cellSize);
+  const mat = new THREE.MeshBasicMaterial({color: 0xffffff});
+  const inst = new THREE.InstancedMesh(boxGeom, mat, nBuilt);
+  inst.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(nBuilt * 3), 3);
+  scene.add(inst);
+
+  // Pre-compute per-instance metadata (year of conversion, world position)
+  const instMeta = new Array(nBuilt);
+  let idx = 0;
+  for (let r = 0; r < H; r++){
+    for (let c = 0; c < W; c++){
+      const i = r * W + c;
+      const yr = v[i];
+      if (yr < 1) continue;
+      instMeta[idx] = {
+        yr: yr,
+        x: (c - W/2) * cellSize,
+        z: (r - H/2) * cellSize,
+      };
+      idx++;
+    }
+  }
+
+  // Apply visibility for a given step n (0..6)
+  // At step n: pixels with toc value 1..n+1 are visible
+  // Color: current cohort (n+1) = bright red, others fade darker by age
+  const dummy = new THREE.Object3D();
+  const colorObj = new THREE.Color();
+  function applyStep(n){
+    for (let i = 0; i < nBuilt; i++){
+      const m = instMeta[i];
+      if (m.yr <= n + 1){
+        // Visible
+        const age = (n + 1) - m.yr;  // 0 = current cohort, larger = older
+        let h, col;
+        if (m.yr === 1){
+          h = 6.0;             // baseline always 6 units tall
+          col = 0x3a3530;
+        } else {
+          h = 4.0 - age * 0.35;
+          h = Math.max(2.0, h);
+          // Color ramp: cohort just placed = bright red, older = dark
+          if (age === 0){ col = 0xff5872; }
+          else if (age === 1){ col = 0xc04050; }
+          else if (age === 2){ col = 0x803030; }
+          else { col = 0x602828; }
+        }
+        dummy.position.set(m.x, h/2, m.z);
+        dummy.scale.set(1, h, 1);
+        dummy.updateMatrix();
+        inst.setMatrixAt(i, dummy.matrix);
+        colorObj.setHex(col);
+        inst.setColorAt(i, colorObj);
+      } else {
+        // Hidden: scale to 0
+        dummy.position.set(m.x, 0, m.z);
+        dummy.scale.set(0, 0, 0);
+        dummy.updateMatrix();
+        inst.setMatrixAt(i, dummy.matrix);
+      }
+    }
+    inst.instanceMatrix.needsUpdate = true;
+    if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+    // Update HUD
+    document.getElementById('year-display').textContent = yearLabels[n];
+    document.getElementById('step-display').textContent = stepLabels[n];
+    document.getElementById('km-display').textContent = Math.round(cumKm2[n]).toLocaleString();
+    document.getElementById('new-display').textContent = n === 0 ? '--' : '+' + Math.round(newKm2[n]).toLocaleString() + ' km\u00b2';
+    document.getElementById('step-stat').textContent = `step ${n} of 6`;
+    document.getElementById('scrub').value = n;
+  }
+
+  applyStep(0);
+
+  // Starfield
+  const sCount = 800;
+  const sGeom = new THREE.BufferGeometry();
+  const sPos = new Float32Array(sCount * 3);
+  for (let i = 0; i < sCount; i++){
+    const r = 200 + Math.random() * 300;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const theta = Math.random() * Math.PI * 2;
+    sPos[i*3]     = r * Math.sin(phi) * Math.cos(theta);
+    sPos[i*3 + 1] = Math.abs(r * Math.cos(phi)) * 0.7 + 30;
+    sPos[i*3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+  }
+  sGeom.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+  scene.add(new THREE.Points(sGeom, new THREE.PointsMaterial({
+    color: 0x6080a0, size: 0.8, transparent: true, opacity: 0.5,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  })));
+
+  // Camera orbit
+  let theta = Math.atan2(camera.position.x, camera.position.z);
+  let phi = Math.atan2(Math.sqrt(camera.position.x**2 + camera.position.z**2), camera.position.y);
+  let radius = camera.position.length();
+  let target = new THREE.Vector3(0, 5, 0);
+  let isDown = false, mouseX = 0, mouseY = 0;
+  function updateCamera(){
+    camera.position.set(
+      radius * Math.sin(phi) * Math.sin(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.cos(theta)
+    ).add(target);
+    camera.lookAt(target);
+  }
+  renderer.domElement.addEventListener('mousedown', e => {
+    isDown = true; mouseX = e.clientX; mouseY = e.clientY;
+    renderer.domElement.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => {
+    isDown = false; renderer.domElement.style.cursor = 'grab';
+  });
+  window.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    theta -= (e.clientX - mouseX) * 0.006;
+    phi   -= (e.clientY - mouseY) * 0.006;
+    phi = Math.max(0.10, Math.min(Math.PI/2 - 0.05, phi));
+    updateCamera();
+    mouseX = e.clientX; mouseY = e.clientY;
+  });
+  renderer.domElement.addEventListener('wheel', e => {
+    e.preventDefault();
+    radius *= 1 + e.deltaY * 0.001;
+    radius = Math.max(50, Math.min(500, radius));
+    updateCamera();
+  }, {passive: false});
+  renderer.domElement.style.cursor = 'grab';
+
+  // Play / scrub controls
+  let playing = false, currentStep = 0, timer = null;
+  const playBtn = document.getElementById('play-btn');
+  const scrub = document.getElementById('scrub');
+  function step(){
+    currentStep = (currentStep + 1) % 7;
+    applyStep(currentStep);
+    if (currentStep === 6){
+      playing = false;
+      playBtn.innerHTML = '&#8634; Replay';
+      clearInterval(timer);
+    }
+  }
+  function startPlay(){
+    if (currentStep === 6) currentStep = 0;
+    applyStep(currentStep);
+    playing = true;
+    playBtn.innerHTML = '&#10074;&#10074; Pause';
+    timer = setInterval(step, 1400);
+  }
+  function pausePlay(){
+    playing = false;
+    playBtn.innerHTML = '&#9654; Play';
+    if (timer) clearInterval(timer);
+  }
+  playBtn.addEventListener('click', () => {
+    if (playing) pausePlay(); else startPlay();
+  });
+  scrub.addEventListener('input', e => {
+    pausePlay();
+    currentStep = parseInt(e.target.value);
+    applyStep(currentStep);
+  });
+
+  // Slow auto-orbit
+  function animate(){
+    requestAnimationFrame(animate);
+    if (!isDown){
+      theta += 0.0006;
+      updateCamera();
+    }
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+}
+</script>
+</body></html>

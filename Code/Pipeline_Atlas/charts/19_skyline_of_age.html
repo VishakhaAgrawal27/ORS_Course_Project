@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skyline of Age | Hyderabad Urban Growth Atlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="../libs/three.min.js"></script>
+</head>
+<body>
+
+<div class="backlink">
+  <a href="../index.html" target="_top">&#9664; Atlas</a>
+  <span class="sep">|</span>
+  <span class="number">#19</span>
+  <span class="title-here">Skyline of Age</span>
+  <span class="spacer"></span>
+  <a class="prev" href="20_driver-space_bubble_race.html">&larr; Prev</a>
+  <span class="sep">|</span>
+  <a class="next" href="10_the_origins_map.html">Next &rarr;</a>
+</div>
+
+<div class="scene" id="scene"></div>
+
+<div class="info">
+  <div class="eyebrow">Chart 19 &middot; Spatial Reveals</div>
+  <h1>Hyderabad as a city of <em>stacked decades</em>.</h1>
+  <p>Every built-up pixel becomes a tower. <span class="ac">Tower height encodes how long the pixel has been built</span>: the 2020 baseline (oldest) rises tallest in dark gray; each subsequent five-year cohort drops a notch and shifts toward forest green. New cohorts emit <span class="pk">red embers</span> rising into the night, fading as they age. The result is a stepped pyramid centered on the historic core, with younger fringes flattening outward.</p>
+</div>
+
+<div class="legend">
+  <div class="lhdr">Year of Conversion</div>
+  <div class="li"><div class="ld" style="background:#3a3530"></div>2020 baseline (tallest)</div>
+  <div class="li"><div class="ld" style="background:#FF5872"></div>2025 (red ember)</div>
+  <div class="li"><div class="ld" style="background:#FF9933"></div>2030</div>
+  <div class="li"><div class="ld" style="background:#FFD700"></div>2035</div>
+  <div class="li"><div class="ld" style="background:#C8B400"></div>2040</div>
+  <div class="li"><div class="ld" style="background:#9aa830"></div>2045</div>
+  <div class="li"><div class="ld" style="background:#5a8a30"></div>2050 (shortest)</div>
+  <div class="lf">Drag to orbit &middot; scroll to zoom</div>
+</div>
+
+<div class="analysis">
+  <div class="card">
+    <div class="lbl">Voxel count</div>
+    <span class="num">71k</span>
+    Built-up pixels rendered as a single Three.js InstancedMesh &mdash; 71,131 total: 34,857 from 2020, 36,274 added by the model across 2025 to 2050.
+  </div>
+  <div class="card">
+    <div class="lbl">Old core, new fringe</div>
+    <span class="num gold">7&times;</span>
+    The 2020 baseline towers are 7&times; taller than the 2050 newcomers. The simulation visibly stratifies the city by tenure: old, established centre vs raw new periphery.
+  </div>
+  <div class="card">
+    <div class="lbl">Shape signature</div>
+    <span class="num pk">Stepped pyramid</span>
+    Newer (shorter) cohorts settle around the perimeter of older clusters. The model rarely adds isolated outliers &mdash; its neighborhood weight pulls all new growth into existing built clusters.
+  </div>
+  <div class="card">
+    <div class="lbl">Growth velocity</div>
+    <span class="num ac">+104%</span>
+    Built-up area more than doubles over 30 years, but spatial extent grows only ~30% &mdash; the new growth is dense in-fill of already-developing zones, not greenfield sprawl.
+  </div>
+</div>
+
+<script>
+fetch('../data.json').then(r => r.json()).then(d => initChart(d));
+
+function initChart(D){
+  const toc = D.spatial.time_of_conversion_grid_422;
+  const [H, W] = toc.shape;
+  const v = toc.values;
+
+  // Year encoding: 1=2020, 2=2025, ..., 7=2050
+  const yearColor = {
+    1: 0x3a3530, 2: 0xff5872, 3: 0xff9933, 4: 0xffd700,
+    5: 0xc8b400, 6: 0x9aa830, 7: 0x5a8a30,
+  };
+  const yearHeight = { 1: 7.0, 2: 6.0, 3: 5.0, 4: 4.0, 5: 3.0, 6: 2.0, 7: 1.0 };
+
+  let nBuilt = 0;
+  for (let i = 0; i < v.length; i++) if (v[i] >= 1) nBuilt++;
+
+  const renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x06080F);
+  document.getElementById('scene').appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x06080F, 0.0028);
+  const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 2000);
+  camera.position.set(120, 70, 130);
+  camera.lookAt(0, 8, 0);
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.85);
+  dl.position.set(80, 120, 60);
+  scene.add(dl);
+  // Cyan rim light
+  const rim = new THREE.DirectionalLight(0x00d5e0, 0.85);
+  rim.position.set(-80, 40, -60);
+  scene.add(rim);
+  // Pink fill light
+  const fill = new THREE.DirectionalLight(0xff5872, 0.85);
+  fill.position.set(40, 30, -120);
+  scene.add(fill);
+
+  // Ground plane (very dark)
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(280, 280),
+    new THREE.MeshLambertMaterial({color: 0x0A0F1A})
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.01;
+  scene.add(ground);
+  // Subtle grid
+  const grid = new THREE.GridHelper(220, 22, 0x1E293B, 0x111827);
+  grid.position.y = 0.05;
+  scene.add(grid);
+
+  // Build the city
+  const cellSize = 0.5;
+  const boxGeom = new THREE.BoxGeometry(cellSize, 1, cellSize);
+  const mat = new THREE.MeshBasicMaterial({color: 0xffffff});
+  const inst = new THREE.InstancedMesh(boxGeom, mat, nBuilt);
+  inst.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(nBuilt * 3), 3);
+
+  const dummy = new THREE.Object3D();
+  const colorObj = new THREE.Color();
+  const newCohortPositions = [];   // for ember particles
+  let idx = 0;
+  for (let r = 0; r < H; r++){
+    for (let c = 0; c < W; c++){
+      const i = r * W + c;
+      const yr = v[i];
+      if (yr < 1) continue;
+      const h = yearHeight[yr];
+      const x = (c - W/2) * cellSize;
+      const z = (r - H/2) * cellSize;
+      dummy.position.set(x, h/2, z);
+      dummy.scale.set(1, h, 1);
+      dummy.updateMatrix();
+      inst.setMatrixAt(idx, dummy.matrix);
+      colorObj.setHex(yearColor[yr]);
+      inst.setColorAt(idx, colorObj);
+      idx++;
+      // Newest cohorts (2025-2030) emit embers
+      if (yr === 2 || yr === 3){
+        if (Math.random() < 0.06){  // sample 6% to keep particle count reasonable
+          newCohortPositions.push({x, z, yr, top: h});
+        }
+      }
+    }
+  }
+  inst.instanceMatrix.needsUpdate = true;
+  inst.instanceColor.needsUpdate = true;
+  scene.add(inst);
+
+  // Ember particles rising from new-cohort towers
+  const PCOUNT = newCohortPositions.length * 3;
+  const pPos = new Float32Array(PCOUNT * 3);
+  const pVel = new Float32Array(PCOUNT * 3);
+  const pCol = new Float32Array(PCOUNT * 3);
+  const pLife = new Float32Array(PCOUNT);
+  const pMaxLife = new Float32Array(PCOUNT);
+  const pBase = [];  // base position per particle
+
+  function initParticle(pi){
+    const src = newCohortPositions[pi % newCohortPositions.length];
+    pPos[pi*3]     = src.x + (Math.random() - 0.5) * 0.3;
+    pPos[pi*3 + 1] = src.top;
+    pPos[pi*3 + 2] = src.z + (Math.random() - 0.5) * 0.3;
+    pVel[pi*3]     = (Math.random() - 0.5) * 0.04;
+    pVel[pi*3 + 1] = 0.10 + Math.random() * 0.10;
+    pVel[pi*3 + 2] = (Math.random() - 0.5) * 0.04;
+    // Color by source year
+    const c = src.yr === 2 ? [1.0, 0.35, 0.45] : [1.0, 0.6, 0.2];
+    pCol[pi*3]     = c[0];
+    pCol[pi*3 + 1] = c[1];
+    pCol[pi*3 + 2] = c[2];
+    pLife[pi] = 0;
+    pMaxLife[pi] = 80 + Math.random() * 80;
+    pBase[pi] = src;
+  }
+  for (let pi = 0; pi < PCOUNT; pi++) initParticle(pi);
+
+  const partGeom = new THREE.BufferGeometry();
+  partGeom.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  partGeom.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
+  // Soft point texture
+  const ptCanvas = document.createElement('canvas');
+  ptCanvas.width = 64; ptCanvas.height = 64;
+  const ptCtx = ptCanvas.getContext('2d');
+  const ptGrad = ptCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  ptGrad.addColorStop(0, 'rgba(255,255,255,1)');
+  ptGrad.addColorStop(0.4, 'rgba(255,255,255,0.5)');
+  ptGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ptCtx.fillStyle = ptGrad;
+  ptCtx.fillRect(0, 0, 64, 64);
+  const partMat = new THREE.PointsMaterial({
+    map: new THREE.CanvasTexture(ptCanvas),
+    size: 0.7,
+    transparent: true,
+    opacity: 0.7,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    vertexColors: true,
+    sizeAttenuation: true,
+  });
+  const points = new THREE.Points(partGeom, partMat);
+  scene.add(points);
+
+  // Starfield backdrop
+  const sCount = 1200;
+  const sGeom = new THREE.BufferGeometry();
+  const sPos = new Float32Array(sCount * 3);
+  for (let i = 0; i < sCount; i++){
+    const r = 200 + Math.random() * 300;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const theta = Math.random() * Math.PI * 2;
+    sPos[i*3]     = r * Math.sin(phi) * Math.cos(theta);
+    sPos[i*3 + 1] = Math.abs(r * Math.cos(phi)) * 0.7 + 30;  // upper hemisphere
+    sPos[i*3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+  }
+  sGeom.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+  scene.add(new THREE.Points(sGeom, new THREE.PointsMaterial({
+    color: 0x6080a0, size: 0.8, transparent: true, opacity: 0.5,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  })));
+
+  // Mouse orbit
+  let theta = Math.atan2(camera.position.x, camera.position.z);
+  let phi = Math.atan2(Math.sqrt(camera.position.x**2 + camera.position.z**2), camera.position.y);
+  let radius = camera.position.length();
+  let target = new THREE.Vector3(0, 8, 0);
+  let isDown = false, mouseX = 0, mouseY = 0;
+  let isPan = false;
+
+  function updateCamera(){
+    camera.position.set(
+      radius * Math.sin(phi) * Math.sin(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.cos(theta)
+    ).add(target);
+    camera.lookAt(target);
+  }
+
+  renderer.domElement.addEventListener('mousedown', e => {
+    isDown = true; isPan = e.shiftKey;
+    mouseX = e.clientX; mouseY = e.clientY;
+    renderer.domElement.style.cursor = isPan ? 'move' : 'grabbing';
+  });
+  window.addEventListener('mouseup', () => {
+    isDown = false; renderer.domElement.style.cursor = 'grab';
+  });
+  window.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    const dx = e.clientX - mouseX, dy = e.clientY - mouseY;
+    if (isPan){
+      const right = new THREE.Vector3();
+      camera.getWorldDirection(right).cross(camera.up).normalize();
+      target.addScaledVector(right, -dx * 0.18);
+      target.y += dy * 0.18;
+    } else {
+      theta -= dx * 0.006;
+      phi   -= dy * 0.006;
+      phi = Math.max(0.10, Math.min(Math.PI/2 - 0.05, phi));
+    }
+    updateCamera();
+    mouseX = e.clientX; mouseY = e.clientY;
+  });
+  renderer.domElement.addEventListener('wheel', e => {
+    e.preventDefault();
+    radius *= 1 + e.deltaY * 0.001;
+    radius = Math.max(40, Math.min(600, radius));
+    updateCamera();
+  }, {passive: false});
+  renderer.domElement.style.cursor = 'grab';
+
+  // Auto-rotate when idle
+  let lastInteraction = performance.now();
+  renderer.domElement.addEventListener('mousedown', () => lastInteraction = performance.now());
+  renderer.domElement.addEventListener('wheel', () => lastInteraction = performance.now());
+
+  function animate(){
+    requestAnimationFrame(animate);
+    // Update particles
+    for (let pi = 0; pi < PCOUNT; pi++){
+      pPos[pi*3]     += pVel[pi*3];
+      pPos[pi*3 + 1] += pVel[pi*3 + 1];
+      pPos[pi*3 + 2] += pVel[pi*3 + 2];
+      pLife[pi]++;
+      if (pLife[pi] > pMaxLife[pi]) initParticle(pi);
+    }
+    partGeom.attributes.position.needsUpdate = true;
+
+    // Auto-rotate camera if idle for 4s
+    if (performance.now() - lastInteraction > 4000){
+      theta += 0.0008;
+      updateCamera();
+    }
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+}
+</script>
+</body></html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Quota Ribbon | Hyderabad Urban Growth Atlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="../libs/three.min.js"></script>
+</head>
+<body>
+
+<div class="backlink">
+  <a href="../index.html" target="_top">&#9664; Atlas</a>
+  <span class="sep">|</span>
+  <span class="number">#06</span>
+  <span class="title-here">The Quota Ribbon</span>
+  <span class="spacer"></span>
+  <a class="prev" href="14_the_agreement_field.html">&larr; Prev</a>
+  <span class="sep">|</span>
+  <a class="next" href="01_growth_cadence_clock.html">Next &rarr;</a>
+</div>
+
+<div class="scene" id="scene"></div>
+
+<div class="info">
+  <div class="eyebrow">Chart 06 &middot; Mechanism Diagnostics</div>
+  <h1>How the cellular automaton decides <em>how much to build</em>.</h1>
+  <p>The CA is not free to grow as it pleases. At each five-year period it receives a <span class="ac">quota</span> &mdash; a fixed pixel count to place &mdash; distributed across five iterations. Each glowing slab is one period's quota stacked on the running total. Slab heights compound at 12.0% per period: the first slab adds <span class="pk">71,468 pixels</span>; the last adds <span class="gold">138,102</span>, almost double. The visual cadence reveals the simulation's only acceleration mechanism.</p>
+</div>
+
+<div class="legend">
+  <div class="lhdr">Period Stack</div>
+  <div class="li"><div class="ld" style="background:#3a3530"></div>2020 baseline</div>
+  <div class="li"><div class="ld" style="background:#FF5872"></div>2020-2025</div>
+  <div class="li"><div class="ld" style="background:#ff7a48"></div>2025-2030</div>
+  <div class="li"><div class="ld" style="background:#dba03c"></div>2030-2035</div>
+  <div class="li"><div class="ld" style="background:#FFD700"></div>2035-2040</div>
+  <div class="li"><div class="ld" style="background:#9aa830"></div>2040-2045</div>
+  <div class="li"><div class="ld" style="background:#5a8a30"></div>2045-2050</div>
+  <div class="lf">Drag to orbit &middot; hover slab</div>
+</div>
+
+<div class="analysis">
+  <div class="card">
+    <div class="lbl">First period quota</div>
+    <span class="num pk">71,468 px</span>
+    The 2020-2025 slab. About 64 km<sup>2</sup>. Smallest of the six future periods.
+  </div>
+  <div class="card">
+    <div class="lbl">Last period quota</div>
+    <span class="num gold">138,102 px</span>
+    The 2045-2050 slab. About 124 km<sup>2</sup>, almost double the first. Compounding catches up.
+  </div>
+  <div class="card">
+    <div class="lbl">Period growth</div>
+    <span class="num">+12.0%</span>
+    Compound rate per 5-year period derived from the calibrated 2.67%/year base growth rate.
+  </div>
+  <div class="card">
+    <div class="lbl">Per iteration</div>
+    <span class="num ac">14k &rarr; 20k</span>
+    Each period runs as 5 sequential CA iterations (one per simulated year). Per-iteration demand grows from 14,293 in 2020-2025 to 20,376 in 2045-2050.
+  </div>
+</div>
+
+<script>
+fetch('../data.json').then(r => r.json()).then(d => initChart(d));
+
+function initChart(D){
+  const A14 = D.canonical.A14_quota;
+  const A10 = D.canonical.A10_period_pixels;
+
+  // Total cumulative pixel count: baseline (2020) + cumulative quota
+  const baseline = A10.built_px[0];   // 507,507
+  const cumulative = [0].concat(A14.total_quota);  // [0, 71468, 153000, ...]
+  // Per-period increments
+  const increments = [];
+  for (let i = 1; i < cumulative.length; i++){
+    increments.push(cumulative[i] - cumulative[i-1]);
+  }
+  // Verify: increments should be [71468, 81532, 93014, 106112, 121055, 138102]
+
+  const periods = [
+    {label: '2020 baseline', count: baseline,        color: 0x3a3530},
+    {label: '2020-2025',     count: increments[0],   color: 0xFF5872},
+    {label: '2025-2030',     count: increments[1],   color: 0xff7a48},
+    {label: '2030-2035',     count: increments[2],   color: 0xdba03c},
+    {label: '2035-2040',     count: increments[3],   color: 0xFFD700},
+    {label: '2040-2045',     count: increments[4],   color: 0x9aa830},
+    {label: '2045-2050',     count: increments[5],   color: 0x5a8a30},
+  ];
+  const colors = periods.map(p => p.color);
+  const colorHex = periods.map(p => '#' + p.color.toString(16).padStart(6, '0'));
+
+  const renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x06080F);
+  document.getElementById('scene').appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x06080F, 0.0042);
+  const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 500);
+  camera.position.set(34, 22, 34);
+  camera.lookAt(0, 8, 0);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.85);
+  dl.position.set(20, 30, 20);
+  scene.add(dl);
+  scene.add(new THREE.PointLight(0xff5872, 0.45, 60));
+  scene.add(new THREE.PointLight(0x00d5e0, 0.35, 60));
+
+  // Ground
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(80, 60),
+    new THREE.MeshLambertMaterial({color: 0x0A0F1A})
+  );
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+  const grid = new THREE.GridHelper(60, 12, 0x1E293B, 0x111827);
+  grid.position.y = 0.02;
+  scene.add(grid);
+
+  // Stack the slabs vertically as a single tower
+  // Use a HEIGHT_SCALE such that total reaches ~22 world units
+  const total = periods.reduce((a, p) => a + p.count, 0);
+  const HEIGHT_SCALE = 22 / total;
+  const SLAB_W = 6, SLAB_D = 6;
+
+  const slabs = [];
+  let yCursor = 0;
+  periods.forEach((p, i) => {
+    const h = p.count * HEIGHT_SCALE;
+    const slab = new THREE.Mesh(
+      new THREE.BoxGeometry(SLAB_W, h, SLAB_D),
+      new THREE.MeshPhongMaterial({color: p.color, emissive: p.color, emissiveIntensity:0.6, shininess:60}),
+    );
+    slab.position.set(0, yCursor + h/2, 0);
+    slab.userData = {period: p, idx: i, height: h};
+    scene.add(slab);
+    slabs.push(slab);
+
+    // Label on the right side
+    const cv = document.createElement('canvas');
+    cv.width = 384; cv.height = 96;
+    const cx = cv.getContext('2d');
+    cx.fillStyle = colorHex[i];
+    cx.font = '600 28px Source Sans 3, sans-serif';
+    cx.textAlign = 'left';
+    cx.fillText(p.label, 8, 36);
+    cx.fillStyle = '#94A3B8';
+    cx.font = '500 22px JetBrains Mono, monospace';
+    cx.fillText('+' + p.count.toLocaleString() + ' px', 8, 70);
+    const tex = new THREE.CanvasTexture(cv);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+    sp.position.set(SLAB_W/2 + 5, yCursor + h/2, 0);
+    sp.scale.set(5.4, 1.3, 1);
+    scene.add(sp);
+
+    yCursor += h;
+  });
+
+  // Top label: 2050 cumulative total
+  const topCv = document.createElement('canvas');
+  topCv.width = 384; topCv.height = 96;
+  const tcx = topCv.getContext('2d');
+  tcx.fillStyle = '#FFD700';
+  tcx.font = 'italic 700 36px Playfair Display, serif';
+  tcx.textAlign = 'center';
+  tcx.fillText('2050 total', 192, 50);
+  tcx.fillStyle = '#F0F4F8';
+  tcx.font = '500 22px JetBrains Mono, monospace';
+  tcx.fillText((baseline + total - baseline).toLocaleString() + ' px', 192, 80);  // total cumulative
+  const topTex = new THREE.CanvasTexture(topCv);
+  const topSp = new THREE.Sprite(new THREE.SpriteMaterial({map:topTex, transparent:true, depthWrite:false}));
+  topSp.position.set(0, yCursor + 1.2, 0);
+  topSp.scale.set(4.5, 1.1, 1);
+  scene.add(topSp);
+
+  // Hover tooltip
+  const tip = document.getElementById('tip');
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  let hovered = null;
+  renderer.domElement.addEventListener('mousemove', e => {
+    mouse.x = (e.clientX / innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(slabs);
+    if (hits.length > 0){
+      const o = hits[0].object;
+      const p = o.userData.period;
+      const pctOfTotal = (p.count / total * 100).toFixed(1);
+      tip.style.display = 'block';
+      tip.style.left = (e.clientX + 14) + 'px';
+      tip.style.top = (e.clientY - 12) + 'px';
+      tip.innerHTML = `<b>${p.label}</b><br>
+        ${p.count.toLocaleString()} pixels<br>
+        ${(p.count * 0.0009).toFixed(1)} km\u00b2<br>
+        ${pctOfTotal}% of cumulative 2050 total`;
+      if (hovered && hovered !== o) hovered.material.emissiveIntensity = 0.22;
+      hovered = o;
+      hovered.material.emissiveIntensity = 0.85;
+    } else {
+      tip.style.display = 'none';
+      if (hovered){ hovered.material.emissiveIntensity = 0.22; hovered = null; }
+    }
+  });
+
+  // Starfield
+  const sCount = 700;
+  const sGeom = new THREE.BufferGeometry();
+  const sPos = new Float32Array(sCount * 3);
+  for (let i = 0; i < sCount; i++){
+    const r = 80 + Math.random() * 120;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const theta = Math.random() * Math.PI * 2;
+    sPos[i*3] = r * Math.sin(phi) * Math.cos(theta);
+    sPos[i*3+1] = Math.abs(r * Math.cos(phi)) * 0.7 + 30;
+    sPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
+  }
+  sGeom.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+  scene.add(new THREE.Points(sGeom, new THREE.PointsMaterial({
+    color: 0x6080a0, size: 0.6, transparent: true, opacity: 0.45,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  })));
+
+  // Camera orbit
+  let theta = Math.atan2(camera.position.x, camera.position.z);
+  let phi = Math.atan2(Math.sqrt(camera.position.x**2 + camera.position.z**2), camera.position.y);
+  let radius = camera.position.length();
+  let target = new THREE.Vector3(0, 8, 0);
+  let isDown = false, mouseX = 0, mouseY = 0;
+  function updateCamera(){
+    camera.position.set(
+      radius * Math.sin(phi) * Math.sin(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.cos(theta)
+    ).add(target);
+    camera.lookAt(target);
+  }
+  renderer.domElement.addEventListener('mousedown', e => {
+    isDown = true; mouseX = e.clientX; mouseY = e.clientY;
+    renderer.domElement.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => { isDown = false; renderer.domElement.style.cursor = 'grab'; });
+  window.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    theta -= (e.clientX - mouseX) * 0.006;
+    phi   -= (e.clientY - mouseY) * 0.006;
+    phi = Math.max(0.10, Math.min(Math.PI/2 - 0.05, phi));
+    updateCamera();
+    mouseX = e.clientX; mouseY = e.clientY;
+  });
+  renderer.domElement.addEventListener('wheel', e => {
+    e.preventDefault();
+    radius *= 1 + e.deltaY * 0.001;
+    radius = Math.max(20, Math.min(100, radius));
+    updateCamera();
+  }, {passive: false});
+  renderer.domElement.style.cursor = 'grab';
+
+  function animate(){
+    requestAnimationFrame(animate);
+    if (!isDown){
+      theta += 0.0010;
+      updateCamera();
+    }
+    renderer.render(scene, camera);
+  }
+  animate();
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+}
+</script>
+</body></html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Barren Paradox | Hyderabad Urban Growth Atlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="../libs/plotly.min.js"></script>
+<style>
+.n2-plot { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+
+<div class="backlink">
+  <a href="../index.html" target="_top">&#9664; Atlas</a>
+  <span class="sep">|</span>
+  <span class="number">#02</span>
+  <span class="title-here">The Barren Paradox</span>
+  <span class="spacer"></span>
+  <a class="prev" href="06_the_quota_ribbon.html">&larr; Prev</a>
+  <span class="sep">|</span>
+  <a class="next" href="03_driver_polarity_rose.html">Next &rarr;</a>
+</div>
+
+<div class="scene" id="scene">
+  <div id="n2plot" class="n2-plot"></div>
+</div>
+
+<div class="info">
+  <div class="eyebrow">Chart 02 &middot; Mechanism Diagnostics</div>
+  <h1>The class that grows by <em>shrinking</em>.</h1>
+  <p>Bare soil &mdash; ex-agriculture, vacant lots &mdash; has a strange biography. Historically (1990 to 2020), <span class="ac">Random Forest classification</span> swings barren area between 257 and 912 km<sup>2</sup> as cropping cycles and Landsat's spectral overlap with sparse vegetation come and go. From 2020 onward the <span class="pk">cellular automaton</span> drops it almost monotonically from 411 to 144 km<sup>2</sup>. The contrast is the visual punchline: <em>the model treats barren as a stage cities pass through, not a state they remain in</em>.</p>
+</div>
+
+<div class="legend">
+  <div class="lhdr">Series</div>
+  <div class="li"><div class="ld" style="background:#94A3B8"></div>Historical RF (1990-2020)</div>
+  <div class="li"><div class="ld" style="background:#FF5872"></div>Predicted CA (2020-2050)</div>
+  <div class="li"><div class="ld" style="background:#FFD700;border-radius:50%"></div>Pivot year (2020)</div>
+  <div class="lf">Hover any point for value</div>
+</div>
+
+<div class="analysis">
+  <div class="card">
+    <div class="lbl">Historical swing</div>
+    <span class="num ac">257 - 912</span>
+    Range of barren km<sup>2</sup> across the 1990-2020 RF series. Sawtooth pattern reflects post-monsoon cropping cycles + Landsat's narrow spectral discrimination of bare soil.
+  </div>
+  <div class="card">
+    <div class="lbl">Pivot value (2020)</div>
+    <span class="num gold">411 km&sup2;</span>
+    Where the historical Random Forest classification ends and the cellular automaton projection begins. The CA's starting condition.
+  </div>
+  <div class="card">
+    <div class="lbl">2050 endpoint</div>
+    <span class="num pk">144 km&sup2;</span>
+    The model predicts barren falls by 65% over 30 years. Most of the loss is consumed by built-up.
+  </div>
+  <div class="card">
+    <div class="lbl">Net loss from 2020</div>
+    <span class="num">-65%</span>
+    A one-way gate: barren feeds built, never the reverse. The cellular automaton is deterministic; once a barren pixel becomes built, it stays built.
+  </div>
+</div>
+
+<script>
+fetch('../data.json').then(r => r.json()).then(d => initChart(d));
+
+function initChart(D){
+  const A1 = D.canonical.A1_lulc_historical;
+  const A2 = D.canonical.A2_lulc_predicted;
+
+  // Historical trace (excluding 2020 which is the pivot)
+  const histYears = A1.years.slice(0, -1);
+  const histBarren = A1.barren.slice(0, -1);
+  // Pivot (2020): use A1 last value as historical endpoint
+  const pivotYear = 2020;
+  const pivotBarren = A1.barren[A1.barren.length - 1];   // 346.4
+  // Predicted trace (from 2020 onward)
+  const predYears = A2.years;
+  const predBarren = A2.barren;
+
+  const histTrace = {
+    type: 'scatter', mode: 'lines+markers',
+    x: histYears.concat([pivotYear]),
+    y: histBarren.concat([pivotBarren]),
+    name: 'Historical RF',
+    line: {color: '#94A3B8', width: 3.5},
+    marker: {color: '#94A3B8', size: 9, line: {color: '#06080F', width: 1.5}},
+    hovertemplate: '<b>%{x}</b><br>RF barren: <b>%{y:.1f} km\u00b2</b><extra></extra>',
+  };
+  const predTrace = {
+    type: 'scatter', mode: 'lines+markers',
+    x: predYears, y: predBarren,
+    name: 'Predicted CA',
+    line: {color: '#FF5872', width: 3.5},
+    marker: {color: '#FF5872', size: 9, line: {color: '#06080F', width: 1.5}},
+    hovertemplate: '<b>%{x}</b><br>CA barren: <b>%{y:.1f} km\u00b2</b><extra></extra>',
+  };
+  // Pivot marker (gold star at 2020)
+  const pivotTrace = {
+    type: 'scatter', mode: 'markers',
+    x: [pivotYear], y: [predBarren[0]],   // 411 (the CA pivot value, which differs from RF 346.4)
+    name: '2020 pivot (CA)',
+    marker: {color: '#FFD700', size: 18, symbol: 'star', line: {color: '#06080F', width: 1.5}},
+    hovertemplate: '<b>%{x} pivot</b><br>CA initialization: <b>%{y:.1f} km\u00b2</b><extra></extra>',
+  };
+
+  const layout = {
+    paper_bgcolor: '#06080F',
+    plot_bgcolor: '#06080F',
+    font: {family: 'Source Sans 3, sans-serif', color: '#94A3B8'},
+    margin: {l: 80, r: 60, t: 80, b: 220},   // bottom space for analysis cards
+    title: false,
+    xaxis: {
+      title: {text: 'Year', font: {family: 'JetBrains Mono', size: 13, color: '#64748B'}, standoff: 14},
+      tickfont: {family: 'JetBrains Mono', size: 12, color: '#94A3B8'},
+      gridcolor: '#1E293B',
+      zerolinecolor: '#1E293B',
+      linecolor: '#1E293B',
+      showspikes: false,
+    },
+    yaxis: {
+      title: {text: 'Barren land (km\u00b2)', font: {family: 'JetBrains Mono', size: 13, color: '#64748B'}, standoff: 14},
+      tickfont: {family: 'JetBrains Mono', size: 12, color: '#94A3B8'},
+      gridcolor: '#1E293B',
+      zerolinecolor: '#1E293B',
+      linecolor: '#1E293B',
+      range: [0, 1000],
+    },
+    showlegend: false,    // we have our own legend overlay
+    shapes: [
+      {
+        type: 'line',
+        x0: 2020, x1: 2020, y0: 0, y1: 1000,
+        line: {color: '#FFD700', width: 1.5, dash: 'dot'},
+        opacity: 0.45,
+      }
+    ],
+    annotations: [
+      {
+        x: 2020, y: 970,
+        text: '<i>2020 pivot</i>',
+        showarrow: false,
+        xanchor: 'center',
+        font: {family: 'Playfair Display', size: 14, color: '#FFD700', style: 'italic'},
+      },
+      {
+        x: 2008, y: 850,
+        text: '<i>historical noise</i>',
+        showarrow: false,
+        font: {family: 'Playfair Display', size: 14, color: '#94A3B8', style: 'italic'},
+      },
+      {
+        x: 2040, y: 380,
+        text: '<i>monotone decline</i>',
+        showarrow: false,
+        font: {family: 'Playfair Display', size: 14, color: '#FF5872', style: 'italic'},
+      },
+    ],
+    hovermode: 'closest',
+    hoverlabel: {
+      bgcolor: '#06080F',
+      bordercolor: '#00D5E0',
+      font: {family: 'JetBrains Mono', size: 11, color: '#F0F4F8'},
+    },
+  };
+
+  Plotly.newPlot('n2plot', [histTrace, predTrace, pivotTrace], layout,
+    {displayModeBar: false, responsive: true, staticPlot: false}
+  );
+
+  window.addEventListener('resize', () => {
+    Plotly.Plots.resize('n2plot');
+  });
+}
+</script>
+</body></html>

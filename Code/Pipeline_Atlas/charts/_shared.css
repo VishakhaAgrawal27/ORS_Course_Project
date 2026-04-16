@@ -1,0 +1,307 @@
+/* ============================================================
+   HYDERABAD URBAN GROWTH ATLAS — shared chart-page styles
+   Atlas design language: dark cinematic, cyan + pink + gold accents
+   ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:       #06080F;
+  --bg2:      #0A0F1A;
+  --bg3:      #111827;
+  --bg4:      #161B26;
+  --bd:       #1E293B;
+  --t1:       #F0F4F8;
+  --t2:       #94A3B8;
+  --t3:       #64748B;
+  --ac:       #00D5E0;
+  --ac-dim:   #00D5E022;
+  --pk:       #FF5872;
+  --gold:     #FFD700;
+  --green:    #4caf50;
+  --orange:   #ff9800;
+  --water:    #1b88c4;
+  --veg:      #4caf6e;
+  --barren:   #d49a3a;
+  --built:    #ff5872;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--t1);
+  font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+canvas { display: block; }
+
+/* ============================================================
+   BACKLINK BAR (top, sticky)
+   ============================================================ */
+.backlink {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  background: rgba(8, 11, 19, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--bd);
+  padding: 7px 18px;
+  display: flex; align-items: center; gap: 12px;
+  font-size: 0.74rem; letter-spacing: 0.02em;
+  height: 36px;
+}
+.backlink a {
+  color: var(--ac);
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.backlink a.next, .backlink a.prev { color: var(--t2); font-weight: 500; }
+.backlink a:hover { color: var(--ac); text-shadow: 0 0 8px rgba(0, 213, 224, 0.4); }
+.backlink .sep { color: var(--bd); }
+.backlink .number {
+  color: var(--ac); font-weight: 700; font-family: 'Playfair Display', serif;
+}
+.backlink .title-here {
+  color: var(--t3); overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; max-width: 280px;
+}
+.backlink .spacer { flex: 1; }
+
+/* ============================================================
+   INFO PANEL (top-left, floating)
+   ============================================================ */
+.info {
+  position: absolute;
+  top: 56px;
+  left: 22px;
+  z-index: 30;
+  max-width: 460px;
+  background: rgba(6, 8, 15, 0.78);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  padding: 18px 22px;
+  pointer-events: none;
+}
+.info .eyebrow {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ac);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.info h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--t1);
+  margin-bottom: 8px;
+}
+.info h1 em { font-style: italic; color: var(--ac); }
+.info p {
+  font-size: 0.78rem;
+  color: var(--t2);
+  line-height: 1.55;
+}
+.info p b { color: var(--t1); font-weight: 600; }
+.info p .ac { color: var(--ac); font-weight: 600; }
+.info p .pk { color: var(--pk); font-weight: 600; }
+.info p .gold { color: var(--gold); font-weight: 600; }
+
+/* ============================================================
+   ANALYSIS CARDS (bottom, four-up)
+   ============================================================ */
+.analysis {
+  position: absolute;
+  bottom: 18px; left: 18px; right: 18px;
+  z-index: 30;
+  display: flex; gap: 12px;
+  pointer-events: none;
+}
+.card {
+  flex: 1;
+  background: rgba(6, 8, 15, 0.85);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.74rem;
+  line-height: 1.55;
+  color: var(--t2);
+  pointer-events: auto;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.card:hover { border-color: var(--ac); transform: translateY(-2px); }
+.card .lbl {
+  color: var(--ac);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+.card .num {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.55rem;
+  color: var(--t1);
+  font-weight: 700;
+  display: block;
+  margin: 4px 0 6px;
+  line-height: 1;
+}
+.card .num.gold { color: var(--gold); }
+.card .num.pk { color: var(--pk); }
+.card .num.ac { color: var(--ac); }
+.card p { color: var(--t2); }
+.card b { color: var(--t1); font-weight: 600; }
+
+/* ============================================================
+   LEGEND (top-right by default)
+   ============================================================ */
+.legend {
+  position: absolute;
+  top: 56px; right: 22px;
+  z-index: 30;
+  background: rgba(6, 8, 15, 0.85);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  padding: 13px 16px;
+  font-size: 0.72rem;
+  color: var(--t2);
+  min-width: 180px;
+}
+.legend .lhdr {
+  color: var(--t1);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--bd);
+}
+.legend .li {
+  display: flex; align-items: center; gap: 8px;
+  margin: 5px 0;
+}
+.legend .ld {
+  width: 14px; height: 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.legend .lf {
+  margin-top: 8px; padding-top: 8px;
+  border-top: 1px solid var(--bd);
+  font-size: 0.66rem; color: var(--t3);
+  font-style: italic;
+}
+
+/* ============================================================
+   CONTROLS (bottom-center)
+   ============================================================ */
+.controls {
+  position: absolute;
+  bottom: 22px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex; gap: 10px; align-items: center;
+  background: rgba(6, 8, 15, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--bd);
+  border-radius: 30px;
+  padding: 8px 16px;
+}
+.controls.with-analysis {
+  bottom: 156px;
+}
+.btn {
+  background: transparent;
+  border: 1px solid var(--bd);
+  color: var(--t2);
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 7px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: all 0.2s;
+}
+.btn:hover { border-color: var(--ac); color: var(--ac); }
+.btn.active { background: var(--ac); color: var(--bg); border-color: var(--ac); }
+.btn.pk { color: var(--pk); border-color: var(--pk); }
+.btn.pk:hover { background: var(--pk); color: var(--bg); }
+.scrub {
+  width: 240px;
+  accent-color: var(--ac);
+}
+.stat {
+  font-family: 'JetBrains Mono', 'DM Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--t3);
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   TOOLTIP (raycast hover)
+   ============================================================ */
+.tip {
+  position: absolute;
+  display: none;
+  background: rgba(6, 8, 15, 0.96);
+  border: 1px solid var(--ac);
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  color: var(--t1);
+  pointer-events: none;
+  z-index: 50;
+  max-width: 280px;
+  line-height: 1.6;
+  box-shadow: 0 0 20px rgba(0, 213, 224, 0.15);
+}
+.tip b { color: var(--ac); }
+
+/* ============================================================
+   ORBIT / NAV HINT (top-right of canvas, optional)
+   ============================================================ */
+.orbit-hint {
+  position: absolute;
+  bottom: 22px; right: 22px;
+  z-index: 25;
+  font-family: 'JetBrains Mono', 'DM Mono', monospace;
+  font-size: 0.66rem;
+  color: var(--t3);
+  letter-spacing: 0.04em;
+  text-align: right;
+  line-height: 1.7;
+  background: rgba(6, 8, 15, 0.65);
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--bd);
+}
+.orbit-hint.with-analysis {
+  bottom: 130px;
+}
+
+/* ============================================================
+   FULL-PAGE SCENE
+   ============================================================ */
+.scene {
+  position: fixed; inset: 0;
+  width: 100vw; height: 100vh;
+  background: var(--bg);
+}
+.scene canvas {
+  width: 100%; height: 100%; display: block;
+}
+
+/* ============================================================
+   PLOTLY DARK OVERRIDES
+   ============================================================ */
+.plotly .js-plotly-plot { background: transparent !important; }
+.modebar { display: none !important; }

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Driver Polarity Rose | Hyderabad Urban Growth Atlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="../libs/three.min.js"></script>
+</head>
+<body>
+
+<div class="backlink">
+  <a href="../index.html" target="_top">&#9664; Atlas</a>
+  <span class="sep">|</span>
+  <span class="number">#03</span>
+  <span class="title-here">Driver Polarity Rose</span>
+  <span class="spacer"></span>
+  <a class="prev" href="09_the_transition_matrix.html">&larr; Prev</a>
+  <span class="sep">|</span>
+  <a class="next" href="04_pearson_correlation_network.html">Next &rarr;</a>
+</div>
+
+<div class="scene" id="scene"></div>
+
+<div class="info">
+  <div class="eyebrow">Chart 03 &middot; Driver Mechanics</div>
+  <h1>Five drivers, <em>five spokes</em>.</h1>
+  <p>Each radial spoke is one of the five MLR predictors. Spoke length = absolute value of the coefficient (how strongly the driver pushes built-up probability up or down). Color = sign: <span class="pk">red</span> for positive (more &rarr; more built), <span class="ac">cyan</span> for negative (more &rarr; less built). The visual punchline is <span class="gold">population's dominance</span>: it towers over every other driver. The MLR is essentially "where people are, urban grows" with three small geographic corrections.</p>
+</div>
+
+<div class="legend">
+  <div class="lhdr">Coefficient</div>
+  <div class="li"><div class="ld" style="background:#FF5872"></div>Positive (drives growth)</div>
+  <div class="li"><div class="ld" style="background:#00D5E0"></div>Negative (resists growth)</div>
+  <div class="lf">Drag to orbit &middot; hover spoke</div>
+</div>
+
+<div class="analysis">
+  <div class="card">
+    <div class="lbl">Population (positive)</div>
+    <span class="num pk">+1.71</span>
+    By far the largest coefficient. The model says: the single best predictor of where a pixel will become urban is whether people already live nearby.
+  </div>
+  <div class="card">
+    <div class="lbl">Distance to roads (negative)</div>
+    <span class="num ac">-0.59</span>
+    Second-largest. Pixels far from roads are <em>much less</em> likely to convert. The road network is the urbanisation skeleton.
+  </div>
+  <div class="card">
+    <div class="lbl">Distance to center (negative)</div>
+    <span class="num ac">-0.20</span>
+    Smaller. Center proximity matters but only modestly: Hyderabad's growth is not radial; it follows roads more than radial distance.
+  </div>
+  <div class="card">
+    <div class="lbl">Slope &amp; elevation (small +)</div>
+    <span class="num">+0.06 &amp; +0.05</span>
+    Both positive and very small. The Deccan plateau is uniformly flat; topography is essentially noise.
+  </div>
+</div>
+
+<script>
+fetch('../data.json').then(r => r.json()).then(d => initChart(d));
+
+function initChart(D){
+  const A4 = D.canonical.A4_mlr_builtup;
+  // Five drivers in a fixed order
+  const drivers = [
+    {key: 'population',         label: 'Population',        coef: A4.population},
+    {key: 'distance_to_roads',  label: 'Dist to roads',     coef: A4.distance_to_roads},
+    {key: 'distance_to_center', label: 'Dist to center',    coef: A4.distance_to_center},
+    {key: 'elevation',          label: 'Elevation',         coef: A4.elevation},
+    {key: 'slope',              label: 'Slope',             coef: A4.slope},
+  ];
+  const N = drivers.length;
+  const maxAbs = Math.max(...drivers.map(d => Math.abs(d.coef)));
+
+  const renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x06080F);
+  document.getElementById('scene').appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x06080F, 0.0042);
+  const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 200);
+  camera.position.set(15, 14, 22);
+  camera.lookAt(0, 4, 0);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const key = new THREE.PointLight(0xffffff, 0.7, 60);
+  key.position.set(15, 20, 15);
+  scene.add(key);
+  scene.add(new THREE.PointLight(0xff5872, 0.45, 40));
+  scene.add(new THREE.PointLight(0x00d5e0, 0.45, 40));
+
+  // Ground (a circular dais)
+  const dais = new THREE.Mesh(
+    new THREE.CircleGeometry(14, 64),
+    new THREE.MeshLambertMaterial({color: 0x0A0F1A}),
+  );
+  dais.rotation.x = -Math.PI/2;
+  scene.add(dais);
+  // Outer ring
+  const ringGeom = new THREE.RingGeometry(13.7, 14.0, 64);
+  const ring = new THREE.Mesh(ringGeom, new THREE.MeshBasicMaterial({color: 0x1E293B, side: THREE.DoubleSide}));
+  ring.rotation.x = -Math.PI/2;
+  ring.position.y = 0.02;
+  scene.add(ring);
+
+  // Polar grid: concentric circles at 0.25, 0.5, 0.75, 1.0 of maxAbs
+  [0.25, 0.5, 0.75, 1.0].forEach(frac => {
+    const r = 11 * frac;
+    const segs = 64;
+    const pts = [];
+    for (let i = 0; i <= segs; i++){
+      const t = (i / segs) * Math.PI * 2;
+      pts.push(new THREE.Vector3(r * Math.cos(t), 0.03, r * Math.sin(t)));
+    }
+    const geom = new THREE.BufferGeometry().setFromPoints(pts);
+    scene.add(new THREE.Line(geom, new THREE.LineBasicMaterial({color: 0x1E293B, transparent:true, opacity:0.5})));
+  });
+
+  // Build spokes (cylinders extending vertically from radial position)
+  const HEIGHT_SCALE = 6.5;  // 1.0 abs coef = 6.5 world units tall (so 1.71 = 11 high)
+  const SPOKE_RADIUS = 0.6;
+  const allSpokes = [];
+
+  drivers.forEach((d, i) => {
+    const angle = (i / N) * Math.PI * 2 - Math.PI / 2;  // start from top, go clockwise
+    const x = 7 * Math.cos(angle);
+    const z = 7 * Math.sin(angle);
+    const h = Math.abs(d.coef) * HEIGHT_SCALE;
+    const isPositive = d.coef >= 0;
+    const col = isPositive ? 0xFF5872 : 0x00D5E0;
+    const colHex = isPositive ? '#FF5872' : '#00D5E0';
+    // Vertical bar
+    const bar = new THREE.Mesh(
+      new THREE.CylinderGeometry(SPOKE_RADIUS, SPOKE_RADIUS, h, 24),
+      new THREE.MeshPhongMaterial({color: col, emissive: col, emissiveIntensity:0.6, shininess:80}),
+    );
+    bar.position.set(x, h/2, z);
+    bar.userData = {driver: d, isPositive};
+    scene.add(bar);
+    allSpokes.push(bar);
+    // Coefficient label (top of bar)
+    const cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 80;
+    const cx = cv.getContext('2d');
+    cx.fillStyle = colHex;
+    cx.font = '700 38px Playfair Display, serif';
+    cx.textAlign = 'center';
+    cx.fillText((d.coef >= 0 ? '+' : '') + d.coef.toFixed(2), 128, 50);
+    const tex = new THREE.CanvasTexture(cv);
+    const lbl = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+    lbl.position.set(x, h + 1.3, z);
+    lbl.scale.set(2.6, 0.85, 1);
+    scene.add(lbl);
+
+    // Driver name label below the dais (radial outward)
+    const nv = document.createElement('canvas');
+    nv.width = 256; nv.height = 48;
+    const ncx = nv.getContext('2d');
+    ncx.fillStyle = '#94A3B8';
+    ncx.font = '500 22px Source Sans 3, sans-serif';
+    ncx.textAlign = 'center';
+    ncx.fillText(d.label, 128, 30);
+    const ntex = new THREE.CanvasTexture(nv);
+    const nlbl = new THREE.Sprite(new THREE.SpriteMaterial({map:ntex, transparent:true, depthWrite:false}));
+    const labelR = 11;
+    nlbl.position.set(labelR * Math.cos(angle), -0.6, labelR * Math.sin(angle));
+    nlbl.scale.set(3.2, 0.6, 1);
+    scene.add(nlbl);
+
+    // Spoke connector (radial line from origin to bar)
+    const spokeGeom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0.05, 0),
+      new THREE.Vector3(x, 0.05, z),
+    ]);
+    scene.add(new THREE.Line(spokeGeom, new THREE.LineBasicMaterial({color: col, transparent:true, opacity:0.45})));
+  });
+
+  // Center column (pseudo-R^2 indicator)
+  const centerGeom = new THREE.CylinderGeometry(0.5, 0.5, A4.pseudo_r2 * 6, 24);
+  const center = new THREE.Mesh(centerGeom, new THREE.MeshPhongMaterial({color: 0xFFD700, emissive: 0xFFD700, emissiveIntensity:0.4}));
+  center.position.set(0, A4.pseudo_r2 * 3, 0);
+  scene.add(center);
+  const centerCv = document.createElement('canvas');
+  centerCv.width = 256; centerCv.height = 80;
+  const ccx = centerCv.getContext('2d');
+  ccx.fillStyle = '#FFD700';
+  ccx.font = '700 28px Playfair Display, serif';
+  ccx.textAlign = 'center';
+  ccx.fillText('R\u00b2 = ' + A4.pseudo_r2.toFixed(3), 128, 50);
+  const centerTex = new THREE.CanvasTexture(centerCv);
+  const centerSp = new THREE.Sprite(new THREE.SpriteMaterial({map:centerTex, transparent:true, depthWrite:false}));
+  centerSp.position.set(0, A4.pseudo_r2 * 6 + 0.7, 0);
+  centerSp.scale.set(2.4, 0.8, 1);
+  scene.add(centerSp);
+
+  // Hover tooltip
+  const tip = document.getElementById('tip');
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  let hovered = null;
+  renderer.domElement.addEventListener('mousemove', e => {
+    mouse.x = (e.clientX / innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(allSpokes);
+    if (hits.length > 0){
+      const o = hits[0].object;
+      const d = o.userData.driver;
+      tip.style.display = 'block';
+      tip.style.left = (e.clientX + 14) + 'px';
+      tip.style.top = (e.clientY - 12) + 'px';
+      tip.innerHTML = `<b>${d.label}</b><br>
+        coefficient: <b style="color:${o.userData.isPositive ? '#FF5872' : '#00D5E0'}">${d.coef >= 0 ? '+' : ''}${d.coef.toFixed(4)}</b><br>
+        ${o.userData.isPositive ? 'higher value &rarr; <b>more</b> built-up probability' : 'higher value &rarr; <b>less</b> built-up probability'}`;
+      if (hovered && hovered !== o) hovered.material.emissiveIntensity = 0.35;
+      hovered = o;
+      hovered.material.emissiveIntensity = 1.0;
+    } else {
+      tip.style.display = 'none';
+      if (hovered){ hovered.material.emissiveIntensity = 0.35; hovered = null; }
+    }
+  });
+
+  // Starfield
+  const sCount = 600;
+  const sGeom = new THREE.BufferGeometry();
+  const sPos = new Float32Array(sCount * 3);
+  for (let i = 0; i < sCount; i++){
+    const r = 50 + Math.random() * 100;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const theta = Math.random() * Math.PI * 2;
+    sPos[i*3] = r * Math.sin(phi) * Math.cos(theta);
+    sPos[i*3+1] = Math.abs(r * Math.cos(phi)) * 0.7 + 20;
+    sPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
+  }
+  sGeom.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+  scene.add(new THREE.Points(sGeom, new THREE.PointsMaterial({
+    color: 0x6080a0, size: 0.5, transparent: true, opacity: 0.45,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  })));
+
+  // Camera orbit
+  let theta = Math.atan2(camera.position.x, camera.position.z);
+  let phi = Math.atan2(Math.sqrt(camera.position.x**2 + camera.position.z**2), camera.position.y);
+  let radius = camera.position.length();
+  let target = new THREE.Vector3(0, 4, 0);
+  let isDown = false, mouseX = 0, mouseY = 0;
+  function updateCamera(){
+    camera.position.set(
+      radius * Math.sin(phi) * Math.sin(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.cos(theta)
+    ).add(target);
+    camera.lookAt(target);
+  }
+  renderer.domElement.addEventListener('mousedown', e => {
+    isDown = true; mouseX = e.clientX; mouseY = e.clientY;
+    renderer.domElement.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => { isDown = false; renderer.domElement.style.cursor = 'grab'; });
+  window.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    theta -= (e.clientX - mouseX) * 0.006;
+    phi   -= (e.clientY - mouseY) * 0.006;
+    phi = Math.max(0.10, Math.min(Math.PI/2 - 0.05, phi));
+    updateCamera();
+    mouseX = e.clientX; mouseY = e.clientY;
+  });
+  renderer.domElement.addEventListener('wheel', e => {
+    e.preventDefault();
+    radius *= 1 + e.deltaY * 0.001;
+    radius = Math.max(12, Math.min(60, radius));
+    updateCamera();
+  }, {passive: false});
+  renderer.domElement.style.cursor = 'grab';
+
+  function animate(){
+    requestAnimationFrame(animate);
+    if (!isDown){
+      theta += 0.0010;
+      updateCamera();
+    }
+    // Pulse population spoke (the dominant one)
+    const t = performance.now() * 0.002;
+    allSpokes.forEach((b, i) => {
+      if (b.userData.driver.key === 'population' && b !== hovered){
+        b.material.emissiveIntensity = 0.35 + 0.15 * Math.sin(t);
+      }
+    });
+    renderer.render(scene, camera);
+  }
+  animate();
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+}
+</script>
+</body></html>
