@@ -326,7 +326,7 @@ Terrain characteristics were derived from the Shuttle Radar Topography Mission (
 \paragraph{Slope Calculation}
 Slope was calculated as percent rise using the terrain analysis function, which first computes slope in degrees and then converts to percent rise via the tangent transformation: slope(\%) = tan(degrees) $\times$ 100. This formulation provides an intuitive measure of terrain steepness suitable for urban growth modeling, where steep slopes typically constrain development.
 
-Table \ref{tab:slope_stats} presents slope statistics across the study area. The mean slope of 5.28\% indicates generally gentle terrain conducive to urban development. However, the maximum slope of 81.85\% and standard deviation of 3.93\% reveal substantial topographic variation within the 25 km radius, with some areas exhibiting challenging terrain for construction. The minimum slope of 0.00\% corresponds to flat floodplains and water bodies.
+Table \ref{tab:slope_stats} presents slope statistics across the study area. The mean slope of 5.28\% indicates a general terrain conducive to urban development. However, the maximum slope of 81.85\% and standard deviation of 3.93\% reveal substantial topographic variation within the 25 km radius, with some areas exhibiting challenging terrain for construction. The minimum slope of 0.00\% corresponds to flat floodplains and water bodies.
 
 \begin{table}[H]
 \caption{Slope Driver Statistics (Study Area)}
@@ -539,7 +539,7 @@ To enhance representation of topographic constraints, an additional 126 samples 
 \paragraph{Sample Extraction}
 The combined sample set of 4,126 points was extracted from Google Earth Engine, with coordinates converted to UTM Zone 43N for consistency with the raster framework. For each sample point, values were extracted for all five standardized drivers (slope, elevation, population density, distance to roads, distance to center) and the corresponding 2020 LULC class. The distance-to-roads driver, stored as a NumPy array due to computational constraints, was spatially joined to sample points using pixel coordinate indexing. All samples yielded valid driver values with no missing data.
 
-Table \ref{tab:sample_summary} presents summary statistics for the sample dataset. The standardized drivers exhibit near-zero means and unit standard deviations, confirming successful z-score normalization. Slope shows positive skewness (max = 10.39$\sigma$ vs min = $-1.34\sigma$), reflecting the presence of steep hillocks within the predominantly gentle terrain.
+Table \ref{tab:sample_summary} presents summary statistics for the sample dataset. The standardized drivers exhibit near-zero means and unit standard deviations, confirming successful z-score normalization. Slope shows positive skewness (max = 10.39$\sigma$ vs min = $-1.34\sigma$), reflecting the presence of steep hillocks.
 
 \begin{table}[H]
 \caption{Sample Dataset Summary Statistics (4,126 Points)}
@@ -660,7 +660,7 @@ The dominant driver of urbanization is \textbf{population density} (coefficient:
 
 \textbf{Distance to city center} exhibits a weak negative effect (coefficient: $-0.20$), suggesting that proximity to the urban core slightly favors development, though this effect is substantially weaker than road accessibility. This contrasts with classic monocentric urban models and may reflect Hyderabad's polycentric structure with multiple employment nodes distributed across the metropolitan area, reducing the dominance of the central business district.
 
-\textbf{Elevation} and \textbf{slope} show weak positive effects (coefficients: +0.06 and +0.05 respectively), counterintuitively suggesting that higher elevation and steeper slopes slightly increase built-up probability. However, the magnitude of these effects is minimal (one-tenth to one-thirtieth the strength of population), indicating terrain has limited influence on urbanization in this dataset. This differs from Vani and Rama Chandra Prasad's \cite{vani2022} finding of strong positive slope effects (coefficient: +1.05) for Vijayawada, attributed to population pressure driving hillside encroachment. The weaker terrain effects for Hyderabad may reflect: (1) the predominantly gentle topography of the study area (mean slope 5.28\%), with steep terrain limited to peripheral hillocks, and (2) the metropolitan scale of analysis, wherein abundant flat land remains available, reducing pressure to develop steep areas.
+\textbf{Elevation} and \textbf{slope} show weak positive effects (coefficients: +0.06 and +0.05 respectively), counterintuitively suggesting that higher elevation and steeper slopes slightly increase built-up probability. However, the magnitude of these effects is minimal (one-tenth to one-thirtieth the strength of population), indicating terrain has limited influence on urbanization in this dataset. This differs from Vani and Rama Chandra Prasad's \cite{vani2022} finding of strong positive slope effects (coefficient: +1.05) for Vijayawada, attributed to population pressure driving hillside encroachment. The weaker terrain effects for Hyderabad may reflect: (1) the predominant topography of the study area (mean slope 5.28\%), with steep terrain limited to peripheral hillocks, and (2) the metropolitan scale of analysis, wherein abundant flat land remains available, reducing pressure to develop steep areas.
 
 \paragraph{Comparison with Reference Study}
 Comparison with Vani and Rama Chandra Prasad \cite{vani2022} reveals both consistencies and differences:
@@ -672,7 +672,7 @@ Comparison with Vani and Rama Chandra Prasad \cite{vani2022} reveals both consis
 
 \item \textbf{Different}: Population density is the dominant driver in Hyderabad (+1.71) but was reported with weak negative coefficient in Vijayawada ($-0.0005$). This difference may reflect: (1) different population data sources or processing methods, (2) scale differences (metropolitan vs. Tier-II city), or (3) contrasting demographic-urbanization relationships between the two contexts.
 
-\item \textbf{Different}: Slope effect is weak in Hyderabad (+0.05) but strong in Vijayawada (+1.05). This likely reflects topographic differences: Hyderabad's study area is predominantly gentle (mean slope 5.28\%), whereas Vijayawada's hilly terrain necessitates slope development under population pressure.
+\item \textbf{Different}: Slope effect is weak in Hyderabad (+0.05) but strong in Vijayawada (+1.05). This likely reflects topographic differences: Vijayawada's hilly terrain necessitates slope development under population pressure.
 \end{itemize}
 
 \begin{figure}[H]
@@ -986,17 +986,17 @@ The full-resolution CA model generated urban growth scenarios for 2025, 2030, 20
 \textbf{Year} & \textbf{Water} & \textbf{Vegetation} & \textbf{Barren} & \textbf{Built-up} \\
 \midrule
 2020 & 92.54 & 1,052.28 & 410.76 & 456.76 \\
-2025 & 91.41 & 1,038.76 & 361.08 & 521.07 \\
+2025 & 91.42 & 1,038.76 & 361.08 & 521.07 \\
 2030 & 90.40 & 1,015.88 & 311.60 & 594.46 \\
-2035 & 89.21 & 982.47 & 262.50 & 678.16 \\
-2040 & 87.90 & 933.43 & 217.34 & 773.66 \\
-2045 & 86.09 & 865.71 & 177.92 & 882.61 \\
-2050 & 83.75 & 777.52 & 144.16 & 1,006.91 \\
+2035 & 89.21 & 982.46 & 262.50 & 678.16 \\
+2040 & 87.90 & 933.45 & 217.32 & 773.66 \\
+2045 & 86.08 & 865.73 & 177.91 & 882.61 \\
+2050 & 83.75 & 777.43 & 144.25 & 1,006.91 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Built-up area expands from 456.76 km² (2020) to 1,006.91 km² (2050), representing net growth of 550.15 km² (+120.4\% increase) over the 30-year period. This doubling of urban extent occurs primarily through conversion of vegetation and barren land, with vegetation declining by 274.76 km² (26.1\% loss) and barren declining by 266.60 km² (64.9\% loss). Water body area remains relatively stable (92.54→83.75 km², -9.5\%), with minor losses attributed to edge effects and small water body infill in peri-urban zones.
+Built-up area expands from 456.76 km² (2020) to 1,006.91 km² (2050), representing net growth of 550.15 km² (+120.4\% increase) over the 30-year period. This doubling of urban extent occurs primarily through conversion of vegetation and barren land, with vegetation declining by 274.85 km² (26.1\% loss) and barren declining by 266.51 km² (64.9\% loss). Water body area remains relatively stable (92.54→83.75 km², -9.5\%), with minor losses attributed to edge effects and small water body infill in peri-urban zones.
 
 \subsubsection{Spatial Distribution of Urban Growth}
 
@@ -1213,7 +1213,7 @@ This study developed and validated a hybrid CA-MLR-GA framework for metropolitan
 
 \subsection{Planning and Policy Implications}
 
-The predicted 550.15 km² land requirement for urban expansion by 2050 necessitates proactive infrastructure and environmental planning. This magnitude of growth—equivalent to consuming 26.1\% of existing vegetation cover (274.76 km² loss) and 64.9\% of barren land (266.60 km² loss)—demands strategic interventions to ensure sustainable development. Infrastructure implications include: (1) preemptive water supply, sewerage, and electricity networks for 550 km² of new urban area to avoid informal settlement formation and service deficits, (2) strategic road and metro rail investments to guide growth along planned corridors rather than allowing automobile-dependent sprawl, and (3) institutional capacity building within planning authorities to manage accelerating land conversion rates peaking at 124 km² per five-year period (2045--2050).
+The predicted 550.15 km² land requirement for urban expansion by 2050 necessitates proactive infrastructure and environmental planning. This magnitude of growth—equivalent to consuming 26.1\% of existing vegetation cover (274.85 km² loss) and 64.9\% of barren land (266.51 km² loss)—demands strategic interventions to ensure sustainable development. Infrastructure implications include: (1) preemptive water supply, sewerage, and electricity networks for 550 km² of new urban area to avoid informal settlement formation and service deficits, (2) strategic road and metro rail investments to guide growth along planned corridors rather than allowing automobile-dependent sprawl, and (3) institutional capacity building within planning authorities to manage accelerating land conversion rates peaking at 124 km² per five-year period (2045--2050).
 
 Environmental planning must prioritize vegetation conservation to prevent the 2044 tipping point where built-up area surpasses vegetation cover, fundamentally altering metropolitan ecosystem services. Policy mechanisms include designating 200--300 km² of high-value ecological areas (urban forests, wetlands, agricultural buffer zones) as permanent green belts with strict no-development covenants, implementing density bonuses incentivizing vertical growth in core areas to reduce peripheral expansion, and enforcing transit-oriented development policies clustering mixed-use high-density nodes around metro stations. The spatial prediction outputs directly support prioritization: the change detection maps (Figure \ref{fig:change_detection}) identify growth hotspots requiring preemptive infrastructure investment, while low-probability zones suitable for conservation easements can be targeted for green space preservation before development pressure intensifies.
 
@@ -1243,7 +1243,7 @@ The complete project code, notebooks, and datasets are publicly available at \ur
 
 \section{Acknowledgements}
 
-We gratefully thank Dr.\ Kiran Chand Thumaty for his guidance and instruction throughout the course of this project. We also thank Dr.\ P.\ Rama Chandra Prasad, Lab for Spatial Informatics, IIIT Hyderabad, for his support and mentorship. This work was done using open-source datasets and tools, with computational resources provided by Google Colaboratory.
+We gratefully thank Dr.\ Kiran Chand Thumaty and Dr.\ P.\ Rama Chandra Prasad for their guidance and instruction throughout the course of this project. This work was done using open-source datasets and tools, with computational resources provided by Google Colaboratory.
 
 \renewcommand{\refname}{References}
 \begin{thebibliography}{99}
