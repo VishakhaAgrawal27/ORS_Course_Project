@@ -1,0 +1,137 @@
+.
+├── Code
+│   ├── ORS_Course_Project_April19.ipynb
+│   └── Pipeline_Atlas
+│       ├── audit_atlas.py
+│       ├── charts
+│       │   ├── 01_growth_cadence_clock.html
+│       │   ├── 02_the_barren_paradox.html
+│       │   ├── 03_driver_polarity_rose.html
+│       │   ├── 04_pearson_correlation_network.html
+│       │   ├── 05_seventeen_scenario_constellation.html
+│       │   ├── 06_the_quota_ribbon.html
+│       │   ├── 07_the_sensitivity_cathedral.html
+│       │   ├── 09_the_transition_matrix.html
+│       │   ├── 10_the_origins_map.html
+│       │   ├── 11_the_sigmoid_of_fate.html
+│       │   ├── 12_driver_distributions.html
+│       │   ├── 13_conservation_vs_boom.html
+│       │   ├── 14_the_agreement_field.html
+│       │   ├── 15_six_periods_of_flow.html
+│       │   ├── 16_scenario_similarity_chord.html
+│       │   ├── 17_the_city_year_by_year.html
+│       │   ├── 18_rolling_compactness_ridge.html
+│       │   ├── 19_skyline_of_age.html
+│       │   ├── 20_driver-space_bubble_race.html
+│       │   └── _shared.css
+│       ├── data.json
+│       ├── index.html
+│       ├── libs
+│       │   ├── d3.min.js
+│       │   ├── plotly.min.js
+│       │   └── three.min.js
+│       └── README.txt
+├── End_Eval
+│   ├── figures
+│   │   ├── core_methodology
+│   │   │   ├── 1990.png
+│   │   │   ├── 2000.png
+│   │   │   ├── 2010.png
+│   │   │   ├── 2020.png
+│   │   │   ├── ca_panel.png
+│   │   │   ├── city.jpg
+│   │   │   ├── comparison_2030.png
+│   │   │   ├── distance_road.png
+│   │   │   ├── drivers.png
+│   │   │   ├── lulc_area_analysis.png
+│   │   │   ├── lulc_change_detection.png
+│   │   │   ├── lulc_conf.png
+│   │   │   ├── lulc_line.png
+│   │   │   ├── lulc_spatial_evolution.png
+│   │   │   ├── metrics_comparison.png
+│   │   │   ├── ml_heatmap.png
+│   │   │   ├── mlr_comparison.png
+│   │   │   ├── mlr_prob_surface.png
+│   │   │   ├── moore_kernel.png
+│   │   │   ├── parameter_sensitivity.png
+│   │   │   ├── pearson_vif.png
+│   │   │   ├── pop_line.png
+│   │   │   ├── raw_road.png
+│   │   │   ├── study_buffer.png
+│   │   │   ├── subset_location_map.png
+│   │   │   ├── uncertainty_2030.png
+│   │   │   ├── urban_growth_methodology_final_flow.png
+│   │   │   ├── urban_line.png
+│   │   │   └── vif_bar.png
+│   │   └── parameter_analysis
+│   │       ├── 2030_change1.png
+│   │       ├── 2030_change2.png
+│   │       ├── 2030_pred1.png
+│   │       ├── 2030_pred2.png
+│   │       ├── 2040_pred1.png
+│   │       ├── 2040_pred2.png
+│   │       ├── builtup_area_by_scenario_year.png
+│   │       ├── comarison_across_scenario_patchcount.png
+│   │       ├── compactness.png
+│   │       ├── comparison_across_scenario_compactness.png
+│   │       ├── comparison_across_scenario_edgedensity.png
+│   │       ├── comparison_across_scenario_urban_area_by_scenario.png
+│   │       ├── edge_density.png
+│   │       ├── impact_of_growth_rate.png
+│   │       ├── mean_patch.png
+│   │       ├── nbr_weight_growth_rate.png
+│   │       ├── num_patches.png
+│   │       ├── parameter_sensitivity.png
+│   │       ├── spatial_pattern_comparison1.png
+│   │       ├── spatial_pattern_comparison2.png
+│   │       ├── study_subset.png
+│   │       ├── subset_drivers.png
+│   │       ├── temporal_traject.png
+│   │       ├── uncertainty_map2030.png
+│   │       └── urban_area_by_scenario.png
+│   ├── Urban_Growth_EndPPT_V7.pdf
+│   └── Urban_Growth_EndPPT_V7.pptx
+├── Mid_Eval
+│   ├── images.zip
+│   ├── Mideval_PPT.pdf
+│   └── MidEval_PPT.tex
+├── README.md
+├── Ref_and_Proposal
+│   ├── CA_MLR_GA_Proposal_Improved_from_DrKirans_Guidance.pdf
+│   └── CA_MLR_GA_Ref.pdf
+├── Report
+│   ├── pic
+│   │   ├── 1990.png
+│   │   ├── 2000.png
+│   │   ├── 2010.png
+│   │   ├── 2020.png
+│   │   ├── ca_panel.png
+│   │   ├── comparison_2030.png
+│   │   ├── distance_road.png
+│   │   ├── drivers.png
+│   │   ├── flow.png
+│   │   ├── lulc_area_analysis.png
+│   │   ├── lulc_change_detection.png
+│   │   ├── lulc_conf.png
+│   │   ├── lulc_line.png
+│   │   ├── lulc_spatial_evolution.png
+│   │   ├── metrics_comparison.png
+│   │   ├── ml_heatmap.png
+│   │   ├── mlr_comparison.png
+│   │   ├── mlr_prob_surface.png
+│   │   ├── moore_kernel.png
+│   │   ├── parameter_sensitivity.png
+│   │   ├── pearson_vif.png
+│   │   ├── pop_line.png
+│   │   ├── raw_road.png
+│   │   ├── study_buffer.png
+│   │   ├── subset_location_map.png
+│   │   ├── uncertainty_2030.png
+│   │   ├── urban_line.png
+│   │   └── vif_bar.png
+│   ├── Report.docx
+│   ├── Report.pdf
+│   └── Report.tex
+└── repo_tree.txt
+
+12 directories, 122 files

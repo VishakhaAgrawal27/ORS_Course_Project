@@ -1,537 +1,147 @@
-# Urban Expansion Analysis: Setup and Troubleshooting Guide
+# Quota-Based Cellular Automata Modeling of Urban Expansion in Hyderabad Metropolitan Area (2020-2050)
 
-## Table of Contents
+**Course:** Optical Remote Sensing (ORS), Spring 2025
 
-### Project Coordination
-
-0. [Reference Material](#0-reference-material)
-1. [Milestones Completed](#1-milestones-completed)
-2. [Milestones and Tasks Remaining](#2-milestones-and-tasks-remaining)
-3. [Task Volunteers](#3-task-volunteers)
-4. [Action Plan and Deadlines](#4-action-plan-and-deadlines)
-5. [Repository and Collaboration](#5-repository-and-collaboration)
-
-### Technical Guide
-
-6. [What is This Project?](#6-what-is-this-project)
-7. [What is the Google Cloud Project?](#7-what-is-the-google-cloud-project)
-8. [Do You Need Pre-existing Files?](#8-do-you-need-pre-existing-files)
-9. [Project Initialization Explained](#9-project-initialization-explained)
-10. [Step-by-Step Setup for New Users](#10-step-by-step-setup-for-new-users)
-11. [Common Errors and Fixes](#11-common-errors-and-fixes)
-12. [Parts of the Code You MUST Change](#12-parts-of-the-code-you-must-change)
-13. [Google Drive and File Path Changes](#13-google-drive-and-file-path-changes)
-14. [Troubleshooting Checklist](#14-troubleshooting-checklist)
+**Team:**
+Vishakha Agrawal (2023101040), Goni Anagha (2023101124), Gandlur Valli (2023102068), Nunna Sri Abhinaya (2023102071)
 
 ---
 
-# Part A: Project Coordination
+## Overview
 
-## 0. Reference Material
+This project develops a hybrid CA-MLR-GA model for spatially explicit urban growth prediction in Hyderabad, India. The model integrates Random Forest land use classification (1990-2020), Multinomial Logistic Regression for transition probability estimation, genetic algorithm parameter optimization, and quota-based cellular automata simulation to predict built-up area expansion from 456.76 km² (2020) to 1,006.91 km² (2050) at 30 m resolution over a 1,691 x 1,691 pixel grid (2.86 million cells).
 
-Both are in the root of the repository:
+### Key Results
 
-- **Project Proposal** (with improvements from Dr. Kiran's guidance):
-  [`CA_MLR_GA_Proposal_Imptoved_from_DrKirans_Guidance.pdf`](CA_MLR_GA_Proposal_Imptoved_from_DrKirans_Guidance.pdf)
-- **Primary Reference Paper**:
-  [`Reference_Paper.pdf`](Reference_Paper.pdf)
+| Metric | Value |
+|---|---|
+| RF Classification Accuracy | 80.12% (Kappa 0.735) |
+| CA Calibration Accuracy (1990-2000) | 93.50% (Kappa 0.913) |
+| CA Validation Accuracy (2000-2010) | 93.48% (Kappa 0.913) |
+| Predicted Built-up 2050 | 1,006.91 km² (+120.4% from 2020) |
+| Pseudo R² (MLR) | 0.226 |
+| Study Area | 25 km radius, Hyderabad center (78.4867°E, 17.3850°N) |
 
-All team members should be familiar with both documents before picking up tasks.
+### Interactive Atlas
 
----
-
-## 1. Milestones Completed
-
-> *To be filled in: list milestones from the project proposal that have been
-> completed so far.*
-
-<!-- Example format:
-- [x] Milestone 1: GEE data acquisition and Landsat composite generation
-  (1990-2024)
-- [x] Milestone 2: Random Forest LULC classification with ESA WorldCover
-  training labels
-- [x] Milestone 3: Driver extraction (slope, elevation, population, distance
-  to roads, distance to center, water exclusion)
-- [x] Milestone 4: VIF analysis and MLR model fitting
-- [x] Milestone 5: GA calibration (1990 to 2000) and CA simulation
-- [x] Milestone 6: Multi-scenario analysis (19 scenarios)
-- [x] Milestone 7: GeoTIFF export for GeoServer visualization
--->
+An interactive 3D visualization atlas (19 charts) of the results is available at:
+**https://web.iiit.ac.in/~vishakha.agrawal/viz/other/ors/**
 
 ---
 
-## 2. Milestones and Tasks Remaining
-
-> *To be filled in: list remaining milestones from the proposal, plus any
-> critique or additional requirements raised by Dr. Kiran.*
-
-<!-- Example format:
-### From the Project Proposal
-- [ ] Task A: ...
-- [ ] Task B: ...
-
-### From Dr. Kiran's Critique
-- [ ] Critique 1: ...
-- [ ] Critique 2: ...
--->
-
----
-
-## 3. Task Volunteers
-
-> *To be filled in: team members volunteering for each remaining task.*
-
-<!-- Example format:
-| Task | Volunteer(s) | Status |
-|------|-------------|--------|
-| Task A | Name1, Name2 | Not started |
-| Task B | Name3 | In progress |
--->
-
----
-
-## 4. Action Plan and Deadlines
-
-> *To be filled in: timeline and deadlines for each task.*
-
-<!-- Example format:
-| Task | Deadline | Dependencies |
-|------|----------|-------------|
-| Task A | YYYY-MM-DD | None |
-| Task B | YYYY-MM-DD | Depends on Task A |
--->
-
----
-
-## 5. Repository and Collaboration
-
-**Repo**: [https://github.com/VishakhaAgrawal27/ORS_Course_Project](https://github.com/VishakhaAgrawal27/ORS_Course_Project)
-
-Invites have been sent to all team members' IIIT email addresses. **Please
-accept the invite** to get push access.
-
-### How to Contribute
-
-1. Accept the GitHub invite sent to your IIIT email.
-2. Clone the repo:
-   ```bash
-   git clone https://github.com/VishakhaAgrawal27/ORS_Course_Project.git
-   ```
-3. Create a branch for your task:
-   ```bash
-   git checkout -b feature/your-task-name
-   ```
-4. Push your changes and open a pull request for review.
-
-### Repo Structure
+## Repository Structure
 
 ```
 ORS_Course_Project/
-  CA_MLR_GA_Proposal_Imptoved_from_DrKirans_Guidance.pdf   # Project proposal
-  Reference_Paper.pdf                                       # Primary reference paper
-  ORS_Course_Project_Feb19.ipynb                            # Main notebook
-  README.md                                                 # This file
-  Mid_Eval/
-    images.zip                                              # Figures used in mid-eval
-    Mideval_PPT.pdf                                         # Mid-evaluation presentation (compiled)
-    MidEval_PPT.tex                                         # Mid-evaluation presentation (LaTeX source)
+├── Code/
+│   ├── ORS_Course_Project_April19.ipynb       # Main project notebook (Google Colab)
+│   └── Pipeline_Atlas/                        # Interactive 3D visualization atlas
+│       ├── index.html                         # Atlas entry point
+│       ├── data.json                          # Extracted project data
+│       ├── charts/                            # 19 interactive HTML charts
+│       │   ├── 01_growth_cadence_clock.html
+│       │   ├── 02_the_barren_paradox.html
+│       │   ├── ...
+│       │   └── 20_driver-space_bubble_race.html
+│       └── libs/                              # D3, Plotly, Three.js
+├── Report/
+│   ├── Report.tex                             # LaTeX source (authoritative)
+│   ├── Report.pdf                             # Compiled PDF (64 pages)
+│   ├── Report.docx                            # Word document version
+│   └── pic/                                   # 28 figures used in the report
+├── End_Eval/
+│   ├── Urban_Growth_EndPPT_V7.pptx            # Final presentation (43 slides)
+│   ├── Urban_Growth_EndPPT_V7.pdf
+│   └── figures/                               # Presentation figures
+│       ├── core_methodology/                  # 28 core figures
+│       └── parameter_analysis/                # 25 parameter analysis figures
+├── Mid_Eval/
+│   ├── MidEval_PPT.tex                        # Mid-evaluation LaTeX slides
+│   └── Mideval_PPT.pdf
+├── Ref_and_Proposal/
+│   ├── CA_MLR_GA_Proposal_Improved_from_DrKirans_Guidance.pdf
+│   └── CA_MLR_GA_Ref.pdf                      # Vani & Prasad (2022) reference paper
+└── README.md
 ```
 
 ---
 
-# Part B: Technical Guide
+## Methodology
 
-## 6. What is This Project?
+The project follows a five-phase pipeline:
 
-This notebook performs **urban expansion analysis for Hyderabad, India** using a
-CA-MLR-GA (Cellular Automata, Multinomial Logistic Regression, Genetic Algorithm)
-modeling pipeline. It uses satellite imagery from Landsat (1990 to 2024) via
-Google Earth Engine (GEE) to classify land use and land cover (LULC) and then
-predicts future urban growth (2030, 2040, 2050).
+**Phase 1: LULC Classification.** Random Forest classification of Landsat 5/7/8 imagery (1990-2020) trained on ESA WorldCover 2020 into four classes: Water, Vegetation, Barren, Built-up. Validated against ESA WorldCover 2021 (OA 80.12%, Kappa 0.735).
 
-The pipeline has these major phases:
+**Phase 2: Driver Extraction.** Five spatially explicit drivers standardized via z-score normalization: slope and elevation (SRTM DEM, 30 m), population density (JRC GHS-POP, 1990-2024), distance to roads (OpenStreetMap, 10,105 segments), and distance to city center (1990 built-up centroid). All drivers tested for multicollinearity (VIF range: 1.01-1.14).
 
-- **Phase 1**: Authenticate and initialize GEE, load Landsat imagery for
-  multiple years (1990, 1995, 2000, 2005, 2010, 2015, 2020, 2024).
-- **Phase 2**: Random Forest classification using ESA WorldCover as training
-  labels, validation with confusion matrices.
-- **Phase 3**: Extract spatial drivers (slope, elevation, population density,
-  distance to roads, distance to city center, water exclusion layer).
-- **Phase 4**: VIF testing for multicollinearity, MLR analysis to identify
-  dominant drivers of urban expansion.
-- **Phase 5**: Genetic Algorithm optimization of CA parameters, then CA
-  simulation for future prediction.
-- **Phase 6**: Multi-scenario analysis (19 scenarios with varying parameters)
-  and spatial metric computation.
-- **Phase 7**: Export colored GeoTIFFs for visualization in GeoServer.
+**Phase 3: MLR and CA Calibration.** Multinomial Logistic Regression on 4,126 stratified sample points yields transition probabilities (Pseudo R² = 0.226). Genetic algorithm optimizes CA parameters: neighborhood weight (omega = 1.200), stochasticity (alpha = 0.050), iterations = 10. Sample-based calibration (1990-2000) and validation (2000-2010) achieve 93.50% and 93.48% accuracy.
+
+**Phase 4: Full-Resolution Prediction.** Quota-based CA simulation at 30 m resolution on the complete 1,691 x 1,691 grid. Urban demand constrained to 2.67% annual growth rate (2010-2020 historical trend). Predictions generated for 2025, 2030, 2035, 2040, 2045, 2050.
+
+**Phase 5: Sensitivity and Scenario Analysis.** 17 parameter scenarios testing neighborhood weight, stochasticity, and growth rate effects on spatial metrics (compactness index, edge density, patch count). Growth rate dominates spatial pattern (14-53x stronger than CA parameters).
 
 ---
 
-## 7. What is the Google Cloud Project?
+## Data Sources
 
-### Short Answer
+| Dataset | Source | Resolution | Role |
+|---|---|---|---|
+| Landsat 5 TM / 7 ETM+ / 8 OLI | USGS via GEE | 30 m | LULC classification |
+| ESA WorldCover 2020 | ESA via GEE | 10 m | RF training reference |
+| SRTM DEM | NASA via GEE | 30 m | Elevation and slope |
+| GHS-POP | JRC via GEE | 100 m | Population density |
+| OpenStreetMap | OSM Overpass API | Vector | Distance to roads |
 
-The "cloud project" in the code is a **Google Cloud Platform (GCP) project** that
-acts as a billing and API container for Google Earth Engine requests.
-
-### Detailed Explanation
-
-Google Earth Engine (GEE) is a cloud-based geospatial processing platform.
-Starting from late 2023, GEE requires every user to associate their usage with a
-GCP project. This project is used for:
-
-- Tracking your API usage and quotas
-- Enabling the Earth Engine API under that project
-- (Optionally) linking a billing account for heavy commercial usage; academic
-  and research use is typically free
-
-In the notebook, this line specifies the project:
-
-```python
-ee.Initialize(project='urban-growth-si')
-```
-
-The string `'urban-growth-si'` is the **project ID** of the original author's
-GCP project. This is NOT a shared project. Every user needs their own project.
-
-### The Error Explained
-
-The error your friends are seeing:
-
-```
-EEException: Google Earth Engine API has not been used in project
-urban-growth-si-489507 before or it is disabled.
-```
-
-This means one of two things:
-
-1. They are trying to use the original author's project ID, which they do not
-   have permission to access, OR
-2. They created their own project but have not yet enabled the Earth Engine API
-   on it.
+All processing performed on Google Earth Engine and Google Colaboratory.
 
 ---
 
-## 8. Do You Need Pre-existing Files?
+## Running the Notebook
 
-### For Initial Cells (Cells 0 through 14): NO
+### Prerequisites
 
-The first half of the notebook generates everything from scratch using GEE. All
-satellite imagery, classification results, and driver layers are computed
-on-the-fly from GEE datasets. No local files are needed.
+- Google account with access to Google Earth Engine
+- Google Colaboratory (free tier sufficient)
 
-### For Later Cells (Cells 23 onward): YES
+### Setup
 
-Starting from the MLR/GA/CA phases, the notebook saves intermediate results to
-Google Drive and loads them back in later cells. These files include:
+1. Open `Code/ORS_Course_Project_April19.ipynb` in Google Colab
+2. Authenticate with Google Earth Engine when prompted
+3. Run cells sequentially (the notebook is self-contained)
 
-| File | Created By | Used By |
-|------|-----------|---------|
-| `mlr_model_hyderabad.pkl` | Phase 2B (MLR cell) | Phase 3B, 3C, 5 |
-| `ga_results_hyderabad.json` | Phase 3B (GA cell) | Phase 3C, 5 |
-| `slope_export.tif` | GEE export cell | Phase 5 |
-| `elevation_export.tif` | GEE export cell | Phase 5 |
-| `population_2020_export.tif` | GEE export cell | Phase 5 |
-| `distance_to_center_export.tif` | GEE export cell | Phase 5 |
-| `lulc_2020_export.tif` | GEE export cell | Phase 5 |
-| `exclusion_export.tif` | GEE export cell | Phase 5 |
-| `distance_roads_raster.tif` | Roads cell (local) | Phase 5 |
+The notebook exports all intermediate results (LULC maps, driver arrays, MLR coefficients, CA parameters, prediction grids) and generates all figures used in the report and presentation.
 
-**Key rule**: You must run cells sequentially. Skipping cells will cause
-`NameError` or `FileNotFoundError` because variables and files from earlier cells
-are needed by later ones.
+### Notes
+
+- Full execution takes approximately 2-4 hours on Colab free tier
+- The notebook uses `geemap`, `sklearn`, `scipy`, and standard scientific Python libraries
+- All Landsat imagery is accessed directly from the GEE data catalog (no local downloads required)
+- Study area center coordinates are set to 78.4867°E, 17.3850°N (Hyderabad) with a 25 km radius
 
 ---
 
-## 9. Project Initialization Explained
+## Report
 
-The initialization happens across the first three cells of the notebook. Here is
-what each does and why:
+The report is available in three formats in the `Report/` directory:
 
-### Cell 0: Install Libraries
+- `Report.tex` (LaTeX source, authoritative version)
+- `Report.pdf` (compiled, 64 pages)
+- `Report.docx` (Word document)
 
-```python
-!pip install earthengine-api --upgrade
-!pip install --upgrade geemap
-!pip install rasterio
-```
-
-This installs (or upgrades) the required Python packages in your Colab runtime.
-`earthengine-api` is the Python client for GEE. `geemap` is a higher-level
-wrapper for interactive map visualization. `rasterio` handles GeoTIFF
-reading/writing locally.
-
-### Cell 1: Authenticate
-
-```python
-ee.Authenticate()
-```
-
-This opens a browser-based OAuth2 flow. You sign in with the Google account that
-has Earth Engine access. It generates a token stored in your Colab session. This
-token proves to Google that you are authorized to use GEE.
-
-**Important**: The Google account you authenticate with must have:
-
-- An Earth Engine account (register at
-  [signup.earthengine.google.com](https://signup.earthengine.google.com))
-- A GCP project with the Earth Engine API enabled
-
-### Cell 2: Initialize
-
-```python
-ee.Initialize(project='urban-growth-si')
-```
-
-This tells the GEE Python client which GCP project to bill API calls against.
-All subsequent `ee.Image(...)`, `ee.ImageCollection(...)`, etc. calls go through
-this project.
+The report follows the stipulated format: Introduction (with literature survey, objectives, study area), Materials and Methods, Results and Discussion, Data and Code Availability, Acknowledgements, and References (25 cited works, all DOIs verified).
 
 ---
 
-## 10. Step-by-Step Setup for New Users
+## References
 
-Follow these steps carefully before running the notebook:
+The project methodology follows and extends:
 
-### Step 1: Register for Google Earth Engine
+> M. Vani and P. Rama Chandra Prasad, "Modelling urban expansion of a south-east Asian city, India: comparison between SLEUTH and a hybrid CA model," *Modeling Earth Systems and Environment*, vol. 8, pp. 1419-1431, 2022. https://doi.org/10.1007/s40808-021-01150-3
 
-Go to [https://signup.earthengine.google.com](https://signup.earthengine.google.com)
-and register using your Google account. If you have an institutional (.edu)
-email linked to your Google account, use that. Approval is usually instant for
-academic users.
-
-### Step 2: Create a GCP Project
-
-1. Go to [https://console.cloud.google.com](https://console.cloud.google.com).
-2. Sign in with the same Google account.
-3. Click the project dropdown at the top of the page.
-4. Click "New Project".
-5. Give it a name (e.g., `my-urban-growth`). Note the **Project ID** that
-   Google assigns (it may differ from the name).
-6. Click "Create".
-
-### Step 3: Enable the Earth Engine API
-
-1. In the GCP Console, select your new project from the dropdown.
-2. Go to "APIs & Services" then "Library".
-3. Search for "Google Earth Engine API".
-4. Click on it and press "Enable".
-5. Wait 1 to 2 minutes for propagation.
-
-### Step 4: Modify the Notebook
-
-Change the project ID in Cell 2:
-
-```python
-# CHANGE THIS to your own project ID
-ee.Initialize(project='YOUR-PROJECT-ID-HERE')
-```
-
-For example, if your GCP project ID is `my-urban-growth-2024`, write:
-
-```python
-ee.Initialize(project='my-urban-growth-2024')
-```
-
-### Step 5: Run the Notebook
-
-1. Run Cell 0 (installs).
-2. Run Cell 1 (authentication). Follow the OAuth flow in the popup window. Copy
-   the authorization code back into Colab.
-3. Run Cell 2 (initialization). If it prints the success message, you are set.
+The full bibliography (25 references) is available in the report.
 
 ---
 
-## 11. Common Errors and Fixes
+## Acknowledgements
 
-### Error 1: "PERMISSION_DENIED" / "API has not been used in project"
-
-```
-EEException: Google Earth Engine API has not been used in project
-urban-growth-si-489507 before or it is disabled.
-```
-
-**Cause**: You are using someone else's project ID, or the Earth Engine API is
-not enabled on your own project.
-
-**Fix**: Follow Steps 2 and 3 in Section 10 above. Then change the
-`ee.Initialize(project=...)` line.
-
-### Error 2: "Please authorize access to your Earth Engine account"
-
-**Cause**: You skipped the authentication cell or the token expired.
-
-**Fix**: Re-run `ee.Authenticate()` (Cell 1) and complete the OAuth flow again.
-
-### Error 3: "No images found" or empty ImageCollection
-
-**Cause**: The study area or date range does not intersect with available
-Landsat data for that year/season. Could also happen if the study area geometry
-is malformed.
-
-**Fix**: Verify that `city_center_coords` and `study_area_radius` in Cell 3 are
-correct. The default is `[78.4867, 17.3850]` with a 25 km radius around
-Hyderabad.
-
-### Error 4: NameError for `study_area`, `lulc_rf`, `images`, etc.
-
-**Cause**: You ran a later cell without running earlier cells first. Variables
-defined in earlier cells are not available.
-
-**Fix**: Run all cells sequentially from the top. Use "Runtime > Run all" or
-run each cell in order.
-
-### Error 5: FileNotFoundError for .pkl, .json, or .tif files
-
-**Cause**: The intermediate files have not been generated yet, or Google Drive
-is not mounted.
-
-**Fix**: Ensure Google Drive is mounted (`drive.mount('/content/drive')` in
-Cell 23). Then run all preceding cells so that the pickle/JSON/GeoTIFF files
-are created before the cells that load them.
-
-### Error 6: GEE Export Tasks Never Complete
-
-**Cause**: GEE export tasks (Cells 31 to 35) run asynchronously on Google's
-servers. They can take 5 to 30 minutes depending on region size and server
-load.
-
-**Fix**: After starting exports, repeatedly run the task status check cell
-until all tasks show `COMPLETED`. Only then proceed to cells that load those
-exported GeoTIFFs.
-
-### Error 7: "ModuleNotFoundError: No module named 'geemap'"
-
-**Cause**: Cell 0 (library installation) was not run, or Colab runtime was
-restarted after installation.
-
-**Fix**: Re-run Cell 0. If the issue persists, restart the runtime
-("Runtime > Restart runtime") and run Cell 0 again.
-
-### Error 8: Google Drive Path Mismatch
-
-**Cause**: The notebook writes to
-`/content/drive/MyDrive/urban_growth_hyderabad` and
-`/content/drive/MyDrive/hyderabad_drivers`. If your Drive structure is
-different or you renamed folders, file paths will break.
-
-**Fix**: See Section 13 below.
-
----
-
-## 12. Parts of the Code You MUST Change
-
-Here is a summary of every line that references user-specific or
-environment-specific values:
-
-### 12.1 Earth Engine Project ID (Cell 2) -- MANDATORY
-
-```python
-# Original:
-ee.Initialize(project='urban-growth-si')
-
-# Change to YOUR project:
-ee.Initialize(project='YOUR-PROJECT-ID')
-```
-
-### 12.2 Study Area Coordinates (Cell 3) -- Only if Studying a Different City
-
-```python
-# Default is Hyderabad
-city_center_coords = [78.4867, 17.3850]
-```
-
-If you are studying Hyderabad, leave this unchanged.
-
-### 12.3 Google Drive Paths (Cells 23, 31-35, and later)
-
-```python
-# The code uses these paths:
-project_folder = '/content/drive/MyDrive/urban_growth_hyderabad'
-driver_folder  = '/content/drive/MyDrive/hyderabad_drivers'
-```
-
-These folders are created automatically. But if you have renamed or moved
-them in Drive, update these strings.
-
-### 12.4 GEE Export Folder Names (Cells 31-35)
-
-```python
-folder='hyderabad_drivers'
-```
-
-This is the folder name inside your Google Drive where GeoTIFFs are exported.
-It must match the `driver_folder` path used later when loading files.
-
-### 12.5 Multi-Scenario Paths (Cells 48 onward)
-
-```python
-SUBSET_LOCAL = '/content/subset'
-PREDICTIONS_LOCAL = '/content/predictions'
-PREDICTIONS_DRIVE = '/content/drive/MyDrive/task2_scenarios/predictions'
-```
-
-These are created automatically. No change needed unless you want a custom
-location.
-
----
-
-## 13. Google Drive and File Path Changes
-
-The notebook saves and loads files from Google Drive in multiple places. Here
-is the complete map of file I/O:
-
-### Files Written to Google Drive
-
-| Cell(s) | Path | Contents |
-|---------|------|----------|
-| 23 | `.../urban_growth_hyderabad/` | MLR model (.pkl), GA results (.json), CA outputs |
-| 31-35 | `.../hyderabad_drivers/` | GeoTIFF exports of slope, elevation, population, distance layers |
-| 51 | `.../task2_scenarios/predictions/` | Multi-scenario .npy prediction arrays |
-| 53 | `.../task2_scenarios/metrics/` | Metrics CSV files |
-
-### Files Read from Google Drive
-
-| Cell(s) | Path | Contents |
-|---------|------|----------|
-| 29 | `.../urban_growth_hyderabad/mlr_model_hyderabad.pkl` | Trained MLR model |
-| 30 | `.../urban_growth_hyderabad/ga_results_hyderabad.json` | GA-optimized parameters |
-| 36 | `.../hyderabad_drivers/*.tif` | All exported driver GeoTIFFs |
-
-**Rule**: If you change ANY write path, you must also change the corresponding
-read path.
-
----
-
-## 14. Troubleshooting Checklist
-
-Before asking for help, go through this checklist:
-
-- [ ] I have a Google Earth Engine account (registered at
-      signup.earthengine.google.com)
-- [ ] I have created my own GCP project at console.cloud.google.com
-- [ ] I have enabled the "Google Earth Engine API" on my GCP project
-- [ ] I have changed `ee.Initialize(project='...')` to my own project ID
-- [ ] I ran `ee.Authenticate()` and completed the OAuth flow
-- [ ] I am running cells in order from top to bottom
-- [ ] Google Drive is mounted before cells that save/load files
-- [ ] GEE export tasks have completed before I try to load the exported files
-- [ ] I have not modified variable names or function signatures
-- [ ] I have stable internet (GEE calls require connectivity)
-
----
-
-## Quick Reference: Runtime Expectations
-
-| Phase | Approximate Time | Notes |
-|-------|-----------------|-------|
-| Cell 0 (Install) | 1 to 2 min | One-time per session |
-| Cell 1 (Auth) | 1 min | Interactive; follow the prompts |
-| Cell 2 (Init) | Seconds | Must succeed before anything else |
-| Cells 3-9 (Imagery) | 5 to 10 min | Loads 8 years of Landsat composites |
-| Cell 11 (RF Classification) | 10 to 20 min | Training + classification for all years |
-| Cells 16-21 (Drivers) | 5 to 15 min | Terrain, population, roads |
-| Cells 31-35 (GEE Exports) | 10 to 30 min | Asynchronous; check task status |
-| Cell 28 (GA) | 20 to 60 min | Depends on population size and generations |
-| Cell 30 (CA Simulation) | 5 to 15 min | Full-resolution spatial simulation |
-| Cells 48-56 (Scenarios) | 30 to 60 min | 19 scenarios, each takes a few minutes |
+We thank Dr. Kiran Chand Thumaty and Dr. P. Rama Chandra Prasad for their guidance and instruction throughout the course of this project. This work was done using open-source datasets and tools, with computational resources provided by Google Colaboratory.

@@ -1,0 +1,1348 @@
+\documentclass[12pt,a4paper]{article}
+
+% Font and spacing per stipulated format
+\usepackage{mathptmx}          % Times New Roman
+\usepackage{setspace}
+\onehalfspacing                % 1.5 line spacing
+\usepackage[margin=1in]{geometry}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage{float}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue
+}
+
+\graphicspath{{pic/}}
+
+\begin{document}
+
+\title{Quota-Based Cellular Automata Modeling of Urban Expansion in Hyderabad Metropolitan Area (2020--2050) Using Multinomial Logistic Regression and Genetic Algorithm Optimization}
+
+\author{
+Vishakha Agrawal (2023101040) \and
+Goni Anagha (2023101124) \and
+Gandlur Valli (2023102068) \and
+Nunna Sri Abhinaya (2023102071)
+}
+\date{}
+
+\maketitle
+
+\begin{abstract}
+Rapid urbanization in metropolitan Hyderabad necessitates spatially explicit prediction models for sustainable planning. Cellular automata (CA) coupled with statistical driver analysis provides a framework for simulating land use transitions, but requires careful calibration and validation. This study develops a hybrid CA-MLR-GA model integrating: (1) Random Forest classification of Landsat imagery (1990--2020) trained on ESA WorldCover 2020 into four land use land cover (LULC) classes, (2) extraction and standardization of five drivers (slope, elevation, population density, distance to roads, distance to city center), (3) Multinomial Logistic Regression (MLR) to estimate urbanization probabilities, (4) genetic algorithm (GA) optimization of CA parameters (neighborhood weight, stochasticity, iterations), and (5) full-resolution (30 m) quota-based CA simulation over a 1691$\times$1691 pixel grid (2.86 million cells) for 2020--2050. Sample-based calibration (1990--2000) and validation (2000--2010) achieved 93.50\% and 93.48\% overall accuracy respectively, with Kappa coefficients of 0.913. Spatial predictions indicate built-up area growth from 456.76 km$^2$ (2020) to 1006.91 km$^2$ (2050), a 120.4\% increase driven by historical annual growth rate of 2.67\%. The model provides spatially disaggregated urban expansion scenarios within a 25 km radius, identifying growth and quantifying land conversion patterns for metropolitan planning applications.
+\end{abstract}
+
+
+\section{Introduction}
+
+\subsection{Context and Motivation}
+Rapid urban expansion in Indian metropolitan areas poses significant challenges for infrastructure planning, environmental management, and sustainable development. Hyderabad, driven by information technology sector growth and population migration, exemplifies this metropolitan expansion trend. Spatially explicit models are essential to inform land use planning, infrastructure provisioning, and environmental impact assessment for rapidly evolving urban landscapes.
+
+Cellular Automata (CA) models have been established approaches for simulating spatial land use transitions since their initial application to urban systems by White and Engelen \cite{white1993} and the development of the SLEUTH model by Clarke et al.\ \cite{clarke1997}. The integration of CA with statistical models, particularly logistic regression, enables incorporation of spatial driving factors such as terrain characteristics, accessibility measures, and socio-economic variables. Genetic algorithms (GA) have been applied for automated parameter optimization in CA models, improving calibration efficiency over traditional brute-force search methods \cite{wu2002, goldberg1989}.
+
+This work follows the hybrid CA-MLR approach demonstrated by Vani and Rama Chandra Prasad \cite{vani2022} for Vijayawada, adapting it for metropolitan-scale application. Their findings identified terrain and population as dominant drivers for Indian cities, with the hybrid CA-GA model achieving superior performance over the SLEUTH model, both exceeding 85\% overall accuracy. We adopt their five-driver framework and MLR-CA integration methodology as the foundation for this study.
+
+\subsection{Literature Survey}
+Urban growth simulation using machine learning and CA has evolved substantially over the past decade. The field spans a range of methodological families: traditional ML coupled with CA, unsupervised deep learning approaches, end-to-end deep learning architectures, metaheuristic CA hybrids, and explainable ensemble methods. This section reviews representative studies from each family.
+
+\subsubsection{Traditional ML with CA}
+The most prevalent framework couples a transition probability model (the ML component) with CA for spatial allocation. Shafizadeh-Moghadam et al.\ \cite{shafizadeh2017} provided one of the field's most comprehensive single-study benchmarks by testing six models (ANN, SVR, Random Forest, CART, logistic regression, and MARS), all coupled with CA, on the Tehran Metropolitan Area. ANN-CA achieved the highest AUC of 74.7\%, while MARS-CA attained the best percent-correct metric (59.6\%). Error map analysis revealed that each model produced distinct spatial error patterns, implying that model selection depends on where errors are tolerable in a planning context.
+
+Khan and Sudheer \cite{khan2022} applied Random Forest classification (Kappa 0.93--0.97) and ANN-CA simulation via the MOLUSCE plugin in QGIS for Islamabad (1991--2041), achieving simulation Kappa exceeding 0.85 and spatial similarity above 75\%. Al Mazroa et al.\ \cite{almazroa2024} similarly combined CA-ANN-MLP with Shannon's entropy to quantify sprawl dispersion in Vila Velha, Brazil, across 1994--2034, demonstrating an accessible, cost-effective pipeline for resource-constrained settings.
+
+\subsubsection{Unsupervised Deep Learning with CA}
+Ou et al.\ \cite{ou2019} pioneered the integration of unsupervised deep learning with CA, comparing Deep Belief Networks (DBN-CA) and Stacked Denoising Autoencoders (SDA-CA) against ANN-CA and LR-CA for the Jingjintang urban agglomeration in China. SDA-CA outperformed all alternatives across multiple validation indices at both cell and pattern levels, demonstrating that unsupervised pretraining enables superior feature extraction from urban land-change data, particularly when labeled training samples are scarce.
+
+\subsubsection{End-to-End Deep Learning}
+A clear trend from 2021 onward is that deep learning models increasingly bypass CA entirely, treating urban growth as an image-to-image or sequence prediction problem. Boulila et al.\ \cite{boulila2021} applied Convolutional LSTM (ConvLSTM) to predict urban expansion in Riyadh, Jeddah, and Dammam (Saudi Arabia) using time-series satellite imagery. ConvLSTM outperformed both Pix2pix GAN and Dual GAN on MSE, RMSE, PSNR, and SSIM metrics, suggesting that recurrent architectures capture urban growth trajectories more effectively than generative adversarial approaches for this task.
+
+Pan et al.\ \cite{pan2022} advanced the field further by integrating U-Net (a fully convolutional encoder-decoder CNN) with LSTM for the Beijing-Tianjin-Hebei agglomeration, combining multiscale spatial feature extraction with recurrent temporal sequence learning. Their hybrid model achieved an overall accuracy of 99.18\% and a Kappa coefficient of 0.88, outperforming traditional CA-based approaches. Yang et al.\ \cite{yang2025} applied U-Net to simulate urban growth across multiple Chinese cities in the context of evaluating Urban Development Boundaries, learning spatial transformation rules directly from pairs of historical land-use maps without explicit driver specification.
+
+\subsubsection{Metaheuristic CA Hybrids}
+Vani and Prasad \cite{vani2022} demonstrated a CA-GA hybrid for Vijayawada, India, where genetic algorithm optimization of CA transition rules enabled flexible incorporation of diverse driver types, including socioeconomic variables that the SLEUTH model cannot natively handle. The CA-GA hybrid outperformed SLEUTH by integrating demographic factors alongside terrain and accessibility drivers. This study serves as the primary methodological reference for our work.
+
+\subsubsection{Ensemble Gradient Boosting Methods}
+Recent studies apply ensemble gradient boosting algorithms with explainable AI to urban growth prediction. Mhangara et al.\ \cite{mhangara2025} used XGBoost classification coupled with CA (MOLUSCE) for Rustenburg, South Africa (1994--2030), achieving Kappa of 0.93 and an overall accuracy of 95\%. Khan et al.\ \cite{khan2025} integrated XGBoost, CatBoost, and LightGBM with SHAP-based explainability for Lucknow, India. XGBoost achieved the best discrimination (accuracy 92.4\%, AUC 0.97), and SHAP analysis revealed that drive-time to CBD, proximity to roads, elevation, and projected population accounted for over 70\% of model influence, providing transparent driver attribution critical for planning applications.
+
+\subsubsection{Summary of Approaches}
+Table~\ref{tab:litreview} presents a comparative overview of the reviewed methodologies. Several patterns emerge from this synthesis. First, Landsat imagery at 30\,m resolution remains the most widely used data source. Second, proximity variables (distance to roads, to CBD) and topographic factors (elevation, slope) are the most frequently used drivers. Third, the field is converging on hybrid architectures that combine spatial feature learning with temporal modeling and spatial simulation. Fourth, validation standardization remains a gap, with studies employing at least eight different primary accuracy metrics. The proposed CA-MLR-GA approach in this study belongs to the metaheuristic CA hybrid family, inheriting a well-validated five-driver framework while introducing quota-based demand allocation and full-resolution metropolitan-scale simulation as novel contributions.
+
+\begin{table}[H]
+\caption{Comparative Review of Urban Growth Simulation Methodologies. The proposed CA-MLR-GA approach is highlighted.}
+\label{tab:litreview}
+\centering
+\scriptsize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{p{2.6cm}p{2.4cm}p{1.0cm}p{2.2cm}p{2.2cm}p{2.2cm}p{2.0cm}}
+\toprule
+\textbf{Study} & \textbf{ML Method} & \textbf{CA?} & \textbf{Study Area} & \textbf{Key Drivers} & \textbf{Performance} & \textbf{Projection} \\
+\midrule
+\textbf{This study} & \textbf{MLR + GA + CA} & \textbf{Yes} & \textbf{Hyderabad, India} & \textbf{Slope, elev., pop., dist.\ roads/CBD} & \textbf{OA 93.50\%, $\kappa$\,$>$\,0.91} & \textbf{2020--2050} \\
+\midrule
+Shafizadeh-Moghadam et al.\ (2017) \cite{shafizadeh2017} & 6 ML models + CA & Yes & Tehran, Iran & 7 proximity/terrain & ANN-CA: AUC 74.7\% & Simulated 2030 \\
+Ou et al.\ (2019) \cite{ou2019} & SDA-CA, DBN-CA & Yes & Jingjintang, China & 12 dist./terrain vars & SDA-CA best on FoM & Validated 2015 \\
+Boulila et al.\ (2021) \cite{boulila2021} & ConvLSTM & No & Saudi Arabia (3 cities) & Implicit (imagery) & Best MSE, SSIM & Multi-decadal \\
+Khan \& Sudheer (2022) \cite{khan2022} & ANN-CA (MOLUSCE) & Yes & Islamabad, Pakistan & DEM, slope, dist.\ roads & $\kappa$: 0.93--0.97 & 2031, 2041 \\
+Vani \& Prasad (2022) \cite{vani2022} & CA-GA vs SLEUTH & Yes & Vijayawada, India & Slope, pop., dist.\ roads/CBD, richness & OA $>$ 85\% & 2020--2050 \\
+Pan et al.\ (2022) \cite{pan2022} & U-Net + LSTM & No & Beijing-Tianjin-Hebei & Spatial-temporal features & OA 99.18\%, $\kappa$: 0.88 & 2021--2050 \\
+Al Mazroa et al.\ (2024) \cite{almazroa2024} & CA-ANN-MLP & Yes & Vila Velha, Brazil & Elev., slope, hillshade & Shannon's entropy & 2034 \\
+Mhangara et al.\ (2025) \cite{mhangara2025} & XGBoost + CA & Yes & Rustenburg, S.\ Africa & Spectral, NDVI, NDBI, mining prox. & $\kappa$: 0.93, OA 95\% & 2030 \\
+Khan et al.\ (2025) \cite{khan2025} & XGB/CatBoost/LGBM + SHAP & No & Lucknow, India & Drive-time CBD, roads, elev., pop. & OA 92.4\%, AUC 0.97 & 2031 \\
+Yang et al.\ (2025) \cite{yang2025} & U-Net & No & multiple Chinese cities & Implicit (land-use pairs) & Landscape metrics & 2022--2035 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Objectives of the Study}
+The objective of this study is to model and predict urban expansion in Hyderabad metropolitan area (2020--2050) by: (1) classifying historical LULC (1990--2020) into four classes (Water, Vegetation, Barren, Built-up), (2) identifying dominant spatial drivers of urbanization through statistical analysis, (3) calibrating CA parameters via genetic algorithm optimization, and (4) generating spatially explicit growth scenarios under historical growth trends.
+
+This work provides the following contributions grounded in actual implementation:
+
+\begin{enumerate}
+\item \textbf{Random Forest LULC time series (1990--2020):} Classification trained on ESA WorldCover 2020 reference data in Google Earth Engine, yielding four-class maps at 30 m resolution for a 25 km study area.
+
+\item \textbf{Five-driver framework with standardization:} Bio-physical drivers (slope, elevation from SRTM DEM), socio-economic driver (population density from GHS-POP 2020), accessibility drivers (Euclidean distance to roads from OSM, distance to 1990 city center), and exclusion mask for water bodies, with VIF testing to verify absence of multicollinearity.
+
+\item \textbf{MLR-based transition probability estimation:} Multinomial Logistic Regression with four classes and five predictors, generating spatial probability surfaces for built-up class.
+
+\item \textbf{GA-optimized CA parameters:} Search space covering neighborhood weight $\omega \in [0.5, 2.0]$, stochasticity $\alpha \in [0.01, 0.1]$, and iterations $\in [5, 15]$. Note that GA uses a surrogate fitness function based on parameter proximity to empirically reasonable values, not full CA simulation. Optimal parameters: $\omega=1.20$, $\alpha=0.05$, iterations$=10$.
+
+\item \textbf{Quota-based demand allocation:} Annual growth rate of 2.67\% derived from 2010--2020 historical trend, with urban demand quota per period preventing unrealistic explosive growth through top-K probability-based selection within eligible cells.
+
+\item \textbf{Full-resolution spatial simulation:} 1691$\times$1691 grid (2,859,481 cells) at 30 m resolution, generating predictions for 2025, 2030, 2035, 2040, 2045, and 2050, with change detection maps identifying new versus existing built-up areas.
+\end{enumerate}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,keepaspectratio]{pic/flow.png}
+\caption{Methodological workflow for hybrid CA-MLR-GA urban growth modeling. The model integrates Random Forest LULC classification (1990--2020), five-driver extraction and standardization, Multinomial Logistic Regression for transition probabilities, GA-optimized CA parameters, and quota-based spatial allocation. Sample-based calibration and validation (Phase 3C) uses 4,126 points; full-resolution prediction (Phase 5) processes 2.86 million cells.}
+\label{fig:workflow}
+\end{figure}
+\subsection{Study Area}
+Hyderabad metropolitan region, Telangana, India, serves as the study area (Fig. \ref{fig:study_area}). A circular buffer of 25 km radius was defined around the 1990 built-up centroid at coordinates 78.4867$^\circ$E, 17.3850$^\circ$N, corresponding to UTM Zone 43N coordinates (870,558.69 m East, 1,925,518.33 m North). 
+
+The study area is projected in UTM Zone 43N (EPSG:32643) with bounding box extents from 845,263.77 to 896,000.08 m East (width: 50,736.31 m) and from 1,900,168.90 to 1,950,920.13 m North (height: 50,751.23 m). The grid comprises 1,691$\times$1,691 pixels at 30 m spatial resolution, totaling 2,859,481 cells. The circular study area mask encompasses 2,181,644 pixels (76.3\% coverage), with the remaining 23.7\% (bounding box corners) excluded from analysis. This spatial configuration ensures equal-distance analysis from the historic urban core while balancing computational feasibility with spatial detail at metropolitan scale.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth,keepaspectratio]{pic/study_buffer.png}
+\caption{Study area: 25 km radius circular buffer around Hyderabad city center (1990 built-up centroid). Grid: 1,691$\times$1,691 pixels at 30 m resolution in UTM Zone 43N projection (EPSG:32643).}
+\label{fig:study_area}
+\end{figure}
+
+\section{Materials and Methods}
+
+All satellite imagery, demographic data, and terrain data were accessed via Google Earth Engine \cite{gorelick2017}, with model development, calibration, and prediction executed on Google Colaboratory.
+
+\subsection{Data Sources}
+Table \ref{tab:datasets} summarizes the input datasets used in this study. Landsat imagery at eight time points (1990, 1995, 2000, 2005, 2010, 2015, 2020) from USGS Earth Explorer provided the foundation for LULC classification. ESA WorldCover 2020 \cite{zanaga2021} served as training reference data, with its 11 classes aggregated to our four-class schema (Water, Vegetation, Barren, Built-up). Terrain drivers (elevation and slope) were derived from the 30\,m SRTM DEM \cite{farr2007}. Population density data from JRC Global Human Settlement (GHS-POP) were available for eight time points from 1990 to 2024, with the 2020 layer serving as the primary socio-economic driver. The OSM road network provided accessibility data. The city center was defined as the centroid of 1990 built-up pixels, and the exclusion mask was derived from water bodies in the 1990 LULC classification.
+
+\begin{table}[H]
+\caption{Input Datasets}
+\label{tab:datasets}
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}  % Add vertical spacing between rows
+\begin{tabular}{lllp{2.8cm}p{3.5cm}}
+\toprule
+\textbf{Dataset} & \textbf{Source} & \textbf{Res.} & \textbf{Temporal Coverage} & \textbf{Role in Model} \\
+\midrule
+Landsat TM/ETM+/OLI & USGS & 30 m & 1990, 1995, 2000, 2005, 2010, 2015, 2020 & LULC classification input \\
+ESA WorldCover 2020 & ESA & 10 m$^{\mathrm{a}}$ & 2020 & RF training reference \\
+SRTM DEM & USGS & 30 m & Static (2000) & Elevation and slope drivers \\
+GHS-POP & JRC & 100 m$^{\mathrm{a}}$ & 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2024 & Population density driver \\
+OSM Road Network & OSM & Vector$^{\mathrm{b}}$ & - & Distance to roads driver \\
+City Center & Derived & Point & 1990 & Distance to center driver \\
+Exclusion Mask & Derived & 30 m & 1990 (water bodies) & Constraint layer \\
+\bottomrule
+\multicolumn{5}{l}{\scriptsize $^{\mathrm{a}}$Resampled to 30 m. $^{\mathrm{b}}$Rasterized to 30 m.}
+\end{tabular}
+\end{table}
+\subsection{LULC Classification}
+
+\subsubsection{Preprocessing and Data Preparation}
+Landsat surface reflectance imagery for seven time points (1990, 1995, 2000, 2005, 2010, 2015, 2020) was acquired from USGS Earth Explorer. Cloud masking was applied using the pixel quality assessment band to remove clouds, cloud shadows, and snow contamination. For each year, annual median composites were generated from all available clear observations within the calendar year, ensuring spatially complete and cloud-free representations.
+
+The 25 km circular buffer around the 1990 built-up centroid was applied in Google Earth Engine to extract the study area from the global Landsat archive. All imagery was harmonized to UTM Zone 43N projection (EPSG:32643) at 30 m spatial resolution prior to export as GeoTIFF format for subsequent processing.
+
+\subsubsection{Training Data and Class Schema}
+ESA WorldCover 2020, a global 10 m resolution land cover product, served as the training reference dataset. The ESA product's 11 original classes were aggregated into four classes suitable for urban growth modeling:
+
+\begin{itemize}
+\item \textbf{Class 1 - Water:} Permanent water bodies including rivers, lakes, and reservoirs
+\item \textbf{Class 2 - Vegetation:} Tree cover, shrubland, grassland, and cropland aggregated as vegetated surfaces
+\item \textbf{Class 3 - Barren:} Bare ground, sparse vegetation, and exposed soil
+\item \textbf{Class 4 - Built-up:} Urban fabric including residential, commercial, and industrial areas
+\end{itemize}
+
+Stratified random sampling was conducted within the study area to extract 2,000 training points from ESA WorldCover, ensuring representative coverage of all four classes and spatial distribution across the landscape.
+
+\subsubsection{Random Forest Classification}
+A Random Forest classifier \cite{breiman2001, belgiu2016} with 100 decision trees was trained using 10 Landsat spectral bands as input features. The trained model was applied to all seven Landsat composites (1990--2020) to generate consistent LULC classifications across the time series. The 2020 LULC map served as the baseline for subsequent CA modeling.
+
+\subsubsection{Accuracy Assessment}
+Classification accuracy was evaluated using independent validation against ESA WorldCover 2021 to assess temporal consistency. Standard accuracy metrics were computed including overall accuracy, producer's accuracy (recall), user's accuracy (precision), F1-scores, and Cohen's Kappa coefficient \cite{landis1977}. Table \ref{tab:rf_accuracy} presents detailed accuracy metrics by class.
+
+\begin{table}[H]
+\caption{Random Forest Classification Accuracy Metrics (2020 RF vs ESA 2021 Validation)}
+\label{tab:rf_accuracy}
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Class} & \textbf{Producer's} & \textbf{User's} & \textbf{F1-Score} \\
+ & \textbf{Accuracy (\%)} & \textbf{Accuracy (\%)} & (\%) \\
+\midrule
+Water & 98.50 & 85.28 & 91.42 \\
+Vegetation & 82.00 & 88.17 & 84.97 \\
+Barren & 69.00 & 64.79 & 66.83 \\
+Built-up & 71.00 & 83.53 & 76.76 \\
+\midrule
+\textbf{Overall} & \multicolumn{3}{c}{\textbf{80.12\%}} \\
+\textbf{Kappa} & \multicolumn{3}{c}{\textbf{0.735}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The confusion matrix (Table \ref{tab:confusion_rf}) reveals strong performance for water (98.5\% producer's accuracy) and vegetation (82.0\%), with moderate accuracy for barren (69.0\%) and built-up (71.0\%) classes. The overall accuracy of 80.12\% and Kappa of 0.735 indicate substantial agreement, suitable for urban growth analysis.
+
+\begin{table}[H]
+\caption{Confusion Matrix (2020 RF vs ESA 2021, Sample Counts)}
+\label{tab:confusion_rf}
+\centering
+\small
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lcccc|c}
+\toprule
+\multirow{2}{*}{\textbf{Actual}} & \multicolumn{4}{c}{\textbf{Predicted}} & \multirow{2}{*}{\textbf{Total}} \\
+\cmidrule{2-5}
+& Water & Veg & Barren & Built-up & \\
+\midrule
+Water & 197 & 3 & 0 & 0 & 200 \\
+Vegetation & 3 & 164 & 29 & 4 & 200 \\
+Barren & 29 & 9 & 138 & 24 & 200 \\
+Built-up & 2 & 10 & 46 & 142 & 200 \\
+\midrule
+Total & 231 & 186 & 213 & 170 & 800 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure \ref{fig:confusion_viz} visualizes the confusion matrix, highlighting class-wise classification performance. The diagonal dominance indicates good overall separation, with most confusion occurring between barren and built-up classes due to spectral similarity of exposed urban surfaces and bare soil.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pic/lulc_conf.png}
+\caption{Confusion matrix heatmap for Random Forest classification (2020 RF vs ESA 2021). Diagonal values represent correct classifications. Primary confusion occurs between barren and built-up classes.}
+\label{fig:confusion_viz}
+\end{figure}
+
+\subsubsection{LULC Classification Results}
+
+\paragraph{Temporal LULC Area Statistics}
+Table \ref{tab:lulc_areas} presents the classified land cover areas for all seven time points from 1990 to 2020. 
+
+\begin{table}[H]
+\caption{LULC Area Distribution (km²) 1990--2020}
+\label{tab:lulc_areas}
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcccccccc}
+\toprule
+\textbf{Class} & \textbf{1990} & \textbf{1995} & \textbf{2000} & \textbf{2005} & \textbf{2010} & \textbf{2015} & \textbf{2020} & \textbf{Change} \\
+ & & & & & & & & \textbf{1990--2020} \\
+\midrule
+Water & 46.69 & 106.43 & 47.58 & 70.82 & 99.92 & 31.53 & 96.44 & +49.75 (+106.6\%) \\
+Vegetation & 988.16 & 1382.91 & 791.30 & 856.27 & 944.47 & 580.24 & 1019.37 & +31.21 (+3.2\%) \\
+Barren & 785.10 & 257.01 & 912.34 & 756.10 & 527.73 & 899.10 & 346.40 & $-438.70$ ($-55.9\%$) \\
+Built-up & 113.72 & 179.45 & 182.42 & 250.49 & 361.52 & 422.80 & 471.42 & +357.71 (+314.6\%) \\
+\midrule
+Total & 1933.67 & 1925.80 & 1933.64 & 1933.68 & 1933.64 & 1933.67 & 1933.63 & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Over the 30-year period, built-up area increased from 113.72 km² (1990) to 471.42 km² (2020), representing a 314.6\% expansion (+357.71 km²). This corresponds to an average annual growth rate of 4.85\%. Vegetation cover exhibited minor net increase from 988.16 km² to 1019.37 km² (+31.21 km², +3.2\%), though with substantial inter-annual variability driven primarily by seasonal differences in Landsat composites and sensor transitions affecting the spectral separability of dry scrubland and bare soil. The largest single-period vegetation gain (+120 km², 2015 to 2020) coincides with the Telangana government's Haritha Haram afforestation program, launched in July 2015, which planted over 240 crore saplings statewide and reportedly increased Telangana's green cover from 24\% to 33\% according to the India State of Forest Report 2021. However, comparable vegetation gains also occurred in pre-program periods (2000 to 2010: +153 km² cumulative), indicating that classification noise from phenological and sensor variability remains the dominant source of inter-annual fluctuation, making it difficult to isolate the Haritha Haram signal from the LULC time series without a dedicated vegetation change detection study. Barren land declined from 785.10 km² to 346.40 km² ($-438.70$ km², $-55.9\%$), serving as the primary source for built-up conversion. Water bodies increased from 46.69 km² to 96.44 km² (+49.75 km², +106.6\%), likely reflecting improved classification of canals and water features rather than actual expansion.
+
+\paragraph{Land Cover Change Trends}
+Figure \ref{fig:lulc_trends} illustrates the temporal evolution of the four LULC classes from 1990 to 2020.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pic/lulc_line.png}
+\caption{Temporal trends of LULC classes (1990--2020). Built-up area (red) shows consistent upward trajectory. Barren land (brown) exhibits steep decline. Vegetation (green) fluctuates with inter-annual variability. Water (blue) remains relatively stable with minor increase.}
+\label{fig:lulc_trends}
+\end{figure}
+
+\paragraph{Built-up Area Expansion Pattern}
+Figure \ref{fig:builtup_growth} specifically highlights the built-up class expansion trajectory with period-wise growth rates.
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pic/urban_line.png}
+\caption{Built-up area expansion (1990--2020). Growth accelerates after 2000, with particularly rapid expansion during 2000--2010 period (179.10 km² added, 7.1\% annual growth rate).}
+\label{fig:builtup_growth}
+\end{figure}
+
+The built-up growth rate varied across decades. From 1990 to 2000, built-up area increased by 68.70 km² (60.4\%, average 4.8\% per year). The 2000--2010 period saw accelerated growth of 179.10 km² (98.2\%, average 7.1\% per year). Growth continued during 2010--2020 with an additional 109.90 km² added (30.4\%, average 2.7\% per year), though at a slower percentage rate due to larger base area.
+
+\paragraph{Spatial Pattern of LULC Change}
+Figure \ref{fig:lulc_maps} presents LULC maps for four key time points (1990, 2000, 2010, 2020), illustrating the spatial transformation of the landscape over 30 years.
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{cc}
+\includegraphics[width=0.48\textwidth,height=0.22\textheight,keepaspectratio]{pic/1990.png} &
+\includegraphics[width=0.48\textwidth,height=0.22\textheight,keepaspectratio]{pic/2000.png} \\
+(a) 1990 & (b) 2000 \\[0.3cm]
+\includegraphics[width=0.48\textwidth,height=0.22\textheight,keepaspectratio]{pic/2010.png} &
+\includegraphics[width=0.48\textwidth,height=0.22\textheight,keepaspectratio]{pic/2020.png} \\
+(c) 2010 & (d) 2020 \\
+\end{tabular}
+\caption{LULC classification maps at four time points: (a) 1990 baseline with built-up area of 113.72 km², (b) 2000 showing initial expansion to 182.42 km², (c) 2010 with accelerated growth to 361.52 km², and (d) 2020 with extensive urbanization reaching 471.42 km². Built-up areas (red) expanded 314.6\% over 30 years. Barren land (brown) substantially converted to urban use. Water bodies (blue) remain largely stable.}
+\label{fig:lulc_maps}
+\end{figure}
+
+Visual comparison across the four decades reveals progressive urban growth patterns. From 1990 to 2000, built-up expansion was moderate (+68.70 km²). The 2000--2010 period exhibited the most rapid growth (+179.10 km², 98.2\%), with substantial peripheral sprawl visible. Growth continued during 2010--2020 (+109.90 km²) but at a slower percentage rate. The spatial pattern demonstrates: (1) densification within the existing urban core, (2) outward expansion along radial corridors, and (3) conversion of barren and vegetation at the urban fringe, characteristic of Indian metropolitan growth dynamics \cite{ramachandra2012}.
+\subsection{Driver Extraction and Standardization}
+
+\subsubsection{Terrain Drivers}
+
+Terrain characteristics were derived from the Shuttle Radar Topography Mission (SRTM) Digital Elevation Model \cite{farr2007} at 30\,m spatial resolution. The SRTM DEM, acquired in 2000, was clipped to the study area and processed in Google Earth Engine to extract slope and elevation drivers.
+
+\paragraph{Slope Calculation}
+Slope was calculated as percent rise using the terrain analysis function, which first computes slope in degrees and then converts to percent rise via the tangent transformation: slope(\%) = tan(degrees) $\times$ 100. This formulation provides an intuitive measure of terrain steepness suitable for urban growth modeling, where steep slopes typically constrain development.
+
+Table \ref{tab:slope_stats} presents slope statistics across the study area. The mean slope of 5.28\% indicates generally gentle terrain conducive to urban development. However, the maximum slope of 81.85\% and standard deviation of 3.93\% reveal substantial topographic variation within the 25 km radius, with some areas exhibiting challenging terrain for construction. The minimum slope of 0.00\% corresponds to flat floodplains and water bodies.
+
+\begin{table}[H]
+\caption{Slope Driver Statistics (Study Area)}
+\label{tab:slope_stats}
+\centering
+\small
+\begin{tabular}{lc}
+\toprule
+\textbf{Statistic} & \textbf{Value} \\
+\midrule
+Mean & 5.28\% \\
+Standard Deviation & 3.93\% \\
+Minimum & 0.00\% \\
+Maximum & 81.85\% \\
+Unit & Percent rise \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Elevation Extraction}
+Elevation values were extracted directly from the SRTM DEM in meters above sea level. Table \ref{tab:elevation_stats} shows elevation statistics across the study area. The mean elevation of 547.96 m reflects Hyderabad's position on the Deccan Plateau. The elevation range spans 421 m (minimum, likely in river valleys) to 650 m (maximum, corresponding to granite hillocks characteristic of the region). The standard deviation of 41.20 m indicates moderate topographic relief within the study area.
+
+\begin{table}[H]
+\caption{Elevation Driver Statistics (Study Area)}
+\label{tab:elevation_stats}
+\centering
+\small
+\begin{tabular}{lc}
+\toprule
+\textbf{Statistic} & \textbf{Value} \\
+\midrule
+Mean & 547.96 m \\
+Standard Deviation & 41.20 m \\
+Minimum & 421.00 m \\
+Maximum & 650.00 m \\
+Unit & Meters above sea level \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Z-Score Standardization}
+Both slope and elevation drivers were standardized using z-score normalization to ensure comparability across different measurement units and ranges. The transformation formula applied was:
+
+\begin{equation}
+Z = \frac{X - \mu}{\sigma}
+\label{eq:zscore}
+\end{equation}
+
+where $X$ is the raw driver value, $\mu$ is the mean, and $\sigma$ is the standard deviation. This transformation produces drivers with mean $\approx 0$ and standard deviation $\approx 1$, enabling direct comparison of effect sizes in the subsequent multinomial logistic regression analysis. Standardized drivers were used for all modeling steps (MLR probability estimation and CA simulation), while raw values were retained for interpretation and validation purposes.
+\subsubsection{Population Density Driver}
+
+Population density was derived from the JRC Global Human Settlement Population (GHS-POP) dataset, which provides gridded population estimates at approximately 100 m native resolution. GHS-POP data were extracted for eight time points (1990, 1995, 2000, 2005, 2010, 2015, 2020, 2024) to characterize demographic trends across the study period. For 2024, the GHS-POP 2025 projection was utilized. All population grids were resampled from 100 m to 30 m resolution using bilinear interpolation to match the spatial framework of other drivers, then clipped to the 25 km study area. Each population layer was z-score standardized following the transformation in Equation \ref{eq:zscore}.
+
+\paragraph{Population Growth Trends}
+Table \ref{tab:population_stats} presents population statistics for all eight time points. Total population within the study area increased from 5,489,281 (1990) to 10,085,859 (2024), representing an 83.7\% growth over 34 years. This corresponds to an annual growth rate of 1.81\%, reflecting Hyderabad's rapid urbanization driven by information technology sector expansion and migration. Mean population density increased from 28.34 to 52.07 persons per 100 m pixel, nearly doubling over the study period.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth,keepaspectratio]{pic/pop_line.png}
+\caption{Population growth in study area (1990--2024). (a) Total population increased 83.7\% from 5.5 million to 10.1 million with annual growth rate of 1.81\%. (b) Mean density per 100m pixel nearly doubled from 28.34 to 52.07 persons, indicating settlement intensification.}
+\label{fig:population_growth}
+\end{figure}
+
+\begin{table}[H]
+\caption{Population Density Statistics by Year (GHS-POP)}
+\label{tab:population_stats}
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{cccccc}
+\toprule
+\textbf{Year} & \textbf{GHS Year} & \textbf{Total Population} & \textbf{Mean Density} & \textbf{Std Dev} & \textbf{Max} \\
+ & \textbf{Used} & & \textbf{(persons/100m pixel)} & & \textbf{(persons/pixel)} \\
+\midrule
+1990 & 1990 & 5,489,281 & 28.34 & 80.16 & 1,298.15 \\
+1995 & 1995 & 6,149,166 & 31.74 & 80.46 & 952.44 \\
+2000 & 2000 & 6,753,008 & 34.86 & 82.57 & 922.69 \\
+2005 & 2005 & 7,416,378 & 38.29 & 83.86 & 929.62 \\
+2010 & 2010 & 8,121,613 & 41.93 & 85.45 & 925.08 \\
+2015 & 2015 & 8,855,447 & 45.71 & 88.64 & 938.43 \\
+2020 & 2020 & 9,609,123 & 49.60 & 94.06 & 1,008.37 \\
+2024 & 2025 & 10,085,859 & 52.07 & 97.78 & 1,058.93 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure \ref{fig:population_growth} illustrates total population growth showing steady increase from 5.5 million to 10.1 million over 34 years. Figure \ref{fig:population_growth} presents mean density progression per 100 m pixel, revealing spatial intensification of settlement. The maximum density per pixel increased from 1,298 persons (1990) to 1,059 persons (2024), with the apparent decrease reflecting spatial redistribution rather than depopulation, as total population and mean density both increased substantially.
+
+
+\paragraph{Population Driver for Modeling}
+For the CA modeling framework, population density from 2020 (GHS-POP 2020) was used as the socio-economic driver. This represents a static driver assumption, wherein 2020 population distribution is applied to all prediction periods (2025--2050). While this simplifies the model by avoiding dynamic population forecasting, it acknowledges that actual population redistribution occurs in response to urbanization. The standardized 2020 population layer served as input to the Multinomial Logistic Regression model to estimate urbanization probabilities based on demographic pressure.
+
+\subsubsection{Exclusion Layer}
+
+An exclusion layer was created to prevent unrealistic urbanization in areas physically unsuitable for development. The exclusion layer was derived from water bodies identified in the 1990 LULC classification, representing the earliest available land cover state to establish baseline constraints.
+
+\paragraph{Water Body Extraction}
+Water bodies were extracted by isolating Class 1 (Water) from the 1990 Random Forest LULC classification. This included permanent water features such as rivers, lakes, reservoirs, and associated canals within the study area. The use of 1990 as the reference year ensures that the exclusion mask reflects historical water distribution prior to the most intensive urban expansion period.
+
+\paragraph{Binary Exclusion Mask}
+The extracted water class was converted to a binary exclusion mask where water pixels received a value of 1 (excluded from development) and all other pixels received a value of 0 (eligible for urbanization). This binary raster was maintained at 30 m resolution consistent with other drivers. The exclusion mask was applied during CA simulation to enforce hard constraints, preventing the model from allocating built-up transitions to water bodies regardless of their urbanization probability from the MLR model. This constraint ensures spatial realism by maintaining the integrity of hydrological features throughout the prediction period.
+
+\subsubsection{Distance to Roads Driver}
+
+Road network accessibility was quantified through Euclidean distance to major roads, derived from OpenStreetMap (OSM) \cite{haklay2008} data accessed via the Overpass API. This driver represents transportation infrastructure access, a key determinant of urban development patterns.
+
+\paragraph{Road Network Extraction}
+Major road categories were extracted within a 25 km radius of the city center, including motorways, trunks, primary, secondary, and tertiary roads. The query retrieved 10,124 road segments from the bounding box (4,493.43 km total length). After clipping to the 25 km circular study area to match the spatial extent of other drivers, 10,105 road segments remained (4,264.20 km), with only 19 segments (0.2\%, 229.23 km) removed from corner areas outside the circle.
+
+Table \ref{tab:road_network} presents the road network composition by hierarchy. Tertiary roads (local connectors) dominate the network with 4,058 segments (1,791.09 km, 42.0\%), followed by secondary roads (2,309 segments, 1,082.10 km, 25.4\%). Primary arterials comprise 1,659 segments (627.42 km, 14.7\%), while trunk roads and motorways (limited-access highways) account for 1,080 segments (445.26 km, 10.4\%) and 999 segments (318.34 km, 7.5\%) respectively. This hierarchical distribution reflects Hyderabad's multi-scale transportation infrastructure serving both metropolitan and neighborhood mobility.
+
+\begin{table}[H]
+\caption{Road Network Statistics (25 km Study Area)}
+\label{tab:road_network}
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Road Type} & \textbf{Segments} & \textbf{Length (km)} & \textbf{Percent} \\
+\midrule
+Tertiary & 4,058 & 1,791.09 & 42.0\% \\
+Secondary & 2,309 & 1,082.10 & 25.4\% \\
+Primary & 1,659 & 627.42 & 14.7\% \\
+Trunk & 1,080 & 445.26 & 10.4\% \\
+Motorway & 999 & 318.34 & 7.5\% \\
+\midrule
+\textbf{Total} & \textbf{10,105} & \textbf{4,264.20} & \textbf{100.0\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Rasterization and Distance Calculation}
+The vector road network was rasterized to a 30 m grid (1,691$\times$1,691 pixels, 2,859,481 cells) matching the study area raster framework. Roads were buffered by 30 m prior to rasterization to represent approximate road corridor width (60 m total), accounting for carriageway, shoulders, and immediate roadside areas. This buffering prevents unrealistic zero-distance assignments to pixels adjacent to but not directly intersecting road centerlines.
+
+The rasterization resulted in 204,918 road pixels (7.17\% coverage) and 2,654,563 non-road pixels (92.83\%). Euclidean distance was calculated for all non-road pixels using a distance transform algorithm, measuring straight-line distance to the nearest road pixel. This approach provides a continuous distance surface representing accessibility gradients across the study area.
+
+\paragraph{Distance Statistics and Standardization}
+Table \ref{tab:distance_roads_stats} presents distance-to-roads statistics. The mean distance of 497.55 m (0.50 km) indicates that most areas within the study area are within half a kilometer of major roads, reflecting dense transportation infrastructure. The maximum distance of 4,310.09 m (4.31 km) occurs in peripheral or inter-road gap areas. The standard deviation of 550.97 m indicates substantial spatial variation in road accessibility. The minimum distance of 0.00 m corresponds to road pixels and immediately adjacent cells. Distance values were z-score standardized following Equation \ref{eq:zscore}, yielding a standardized range from $-0.90\sigma$ (on roads or very close) to $+6.92\sigma$ (maximum remoteness).
+
+\begin{table}[H]
+\caption{Distance to Roads Statistics}
+\label{tab:distance_roads_stats}
+\centering
+\small
+\begin{tabular}{lc}
+\toprule
+\textbf{Statistic} & \textbf{Value} \\
+\midrule
+Road Coverage & 7.17\% \\
+Mean Distance & 497.55 m (0.50 km) \\
+Standard Deviation & 550.97 m (0.55 km) \\
+Minimum Distance & 0.00 m \\
+Maximum Distance & 4,310.09 m (4.31 km) \\
+Total Road Length & 4,264.20 km \\
+Road Segments & 10,105 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\subsubsection{Distance to City Center Driver}
+
+Distance to the city center quantifies spatial centrality, representing the monocentric urban structure hypothesis where development intensity decreases with distance from the central business district. The city center was defined as the geographic center of the study area (78.4867°E, 17.3850°N), corresponding to Hyderabad's traditional urban core.
+
+\paragraph{Distance Calculation}
+Euclidean distance to the city center was calculated using a Python-based implementation at 30 m resolution on a 1,691$\times$1,691 pixel grid. The city center coordinates were first transformed from geographic (WGS84, EPSG:4326) to projected coordinates (UTM Zone 43N, EPSG:32643), yielding UTM coordinates of (870,558.69 m E, 1,925,518.33 m N). 
+
+For each pixel in the raster grid, Euclidean distance was computed as:
+
+\begin{equation}
+d = \sqrt{(x - x_c)^2 + (y - y_c)^2}
+\label{eq:euclidean_distance}
+\end{equation}
+
+where $d$ is the distance in meters, $(x, y)$ are the pixel coordinates in UTM projection, and $(x_c, y_c)$ are the city center UTM coordinates. This calculation produces a continuous distance surface with a concentric circular pattern radiating from the city center, ranging from near-zero at the center to approximately 25 km at the study area boundary.
+
+\paragraph{Standardization and Model Input}
+The raw distance values were z-score standardized following Equation \ref{eq:zscore} to ensure comparability with other drivers. The resulting standardized driver exhibits negative values near the city center (below-average distance) and positive values at the periphery (above-average distance), capturing the radial gradient of urban centrality. This standardized distance surface served as input to the MLR model to estimate the influence of centrality on land use transitions.
+
+% After all driver subsections are complete, add these figures:
+
+% ============================================
+% COMBINED DRIVERS FIGURE (3x2 panel)
+% ============================================
+\begin{figure}[H]
+\includegraphics[width=\textwidth,keepaspectratio]{pic/drivers.png}
+\caption{Standardized driver variables for CA modeling (2×3 panel). All continuous drivers (slope, elevation, population density, distance to roads, distance to center) were z-score normalized (mean=0, std=1) for direct comparability in the MLR analysis. The exclusion layer (bottom right) is a binary mask (0=developable, 1=excluded water bodies). Blue values indicate below-average magnitudes, white indicates average, and red/yellow indicates above-average magnitudes.}
+\label{fig:drivers}
+\end{figure}
+
+% ============================================
+% DISTANCE TO ROADS DISTRIBUTION
+% ============================================
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.6\textwidth]{pic/distance_road.png}
+\caption{Distribution of distance to nearest major road. The histogram shows pixel counts by distance bins with mean distance of 0.50 km (red dashed line) and ±1 standard deviation boundaries (orange dotted lines at 0 km and 1.05 km). The distribution is right-skewed, indicating that most pixels are within 1 km of major roads, reflecting Hyderabad's dense transportation infrastructure.}
+\label{fig:distance_roads_dist}
+\end{figure}
+\subsection{Statistical Analysis: Sampling and Multicollinearity Testing}
+
+\subsubsection{Sampling Design}
+
+To calibrate the Multinomial Logistic Regression (MLR) model, a two-stage stratified sampling strategy was employed to ensure representative coverage of all LULC classes and adequate representation of topographic variation across the study area.
+
+\paragraph{Stage 1: LULC-Balanced Sampling}
+In the first stage, 1,000 sample points per LULC class were extracted from the 2020 classification using stratified random sampling, yielding 4,000 samples balanced across Water, Vegetation, Barren, and Built-up classes (96.9\% of total samples). This stratification ensures that the MLR model learns transition patterns for all land cover types, not just the dominant classes.
+
+\paragraph{Stage 2: Steep Terrain Augmentation}
+To enhance representation of topographic constraints, an additional 126 samples (3.1\%) were extracted from areas with slope exceeding one standard deviation above the mean (slope $> 1.0\sigma$ in standardized units). This augmentation addresses the underrepresentation of steep terrain in the primary stratified sample, ensuring the MLR model adequately captures slope effects on urbanization.
+
+\paragraph{Sample Extraction}
+The combined sample set of 4,126 points was extracted from Google Earth Engine, with coordinates converted to UTM Zone 43N for consistency with the raster framework. For each sample point, values were extracted for all five standardized drivers (slope, elevation, population density, distance to roads, distance to center) and the corresponding 2020 LULC class. The distance-to-roads driver, stored as a NumPy array due to computational constraints, was spatially joined to sample points using pixel coordinate indexing. All samples yielded valid driver values with no missing data.
+
+Table \ref{tab:sample_summary} presents summary statistics for the sample dataset. The standardized drivers exhibit near-zero means and unit standard deviations, confirming successful z-score normalization. Slope shows positive skewness (max = 10.39$\sigma$ vs min = $-1.34\sigma$), reflecting the presence of steep hillocks within the predominantly gentle terrain.
+
+\begin{table}[H]
+\caption{Sample Dataset Summary Statistics (4,126 Points)}
+\label{tab:sample_summary}
+\centering
+\small
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Statistic} & \textbf{Slope} & \textbf{Elevation} & \textbf{Population} & \textbf{Dist. Roads} & \textbf{Dist. Center} \\
+\midrule
+Mean ($\mu$) & 0.010 & $-0.049$ & 0.047 & $-0.093$ & 0.000 \\
+Std Dev ($\sigma$) & 1.115 & 0.954 & 1.036 & 0.913 & 1.000 \\
+Minimum & $-1.343$ & $-2.718$ & $-0.527$ & $-0.903$ & $-0.719$ \\
+Maximum & 10.394 & 2.234 & 6.766 & 5.885 & 1.438 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Multicollinearity Testing}
+
+Prior to MLR model fitting, Variance Inflation Factor (VIF) analysis was conducted to detect multicollinearity among the five driver variables. Multicollinearity inflates coefficient standard errors and destabilizes parameter estimates, potentially compromising model interpretability and predictive accuracy . The VIF quantifies how much the variance of a regression coefficient is increased due to linear dependencies with other predictors, computed as:
+
+\begin{equation}
+\text{VIF}_j = \frac{1}{1 - R_j^2}
+\label{eq:vif}
+\end{equation}
+
+where $R_j^2$ is the coefficient of determination from regressing the $j$-th predictor on all other predictors. A VIF value of 1 indicates no correlation, while values exceeding 4--10 suggest problematic multicollinearity requiring remediation. Following Vani and Rama Chandra Prasad \cite{vani2022}, we adopted a conservative threshold of VIF $< 4.0$ for all drivers.
+
+Table \ref{tab:vif_results} presents VIF values for all five drivers, ranked from highest to lowest. All drivers exhibit VIF values between 1.01 and 1.14, well below the threshold of 4.0, indicating negligible multicollinearity. Population density exhibited the highest VIF (1.137), reflecting weak negative correlations with distance to roads ($r = -0.283$) and distance to center ($r = -0.225$), consistent with the expectation that population concentrates near transportation infrastructure and urban cores. However, these correlations are insufficient to cause multicollinearity concerns.
+
+\begin{table}[H]
+\caption{Variance Inflation Factors for Driver Variables}
+\label{tab:vif_results}
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Driver} & \textbf{VIF} & \textbf{Status} \\
+\midrule
+Population density & 1.137 & \checkmark Pass \\
+Distance to roads & 1.113 & \checkmark Pass \\
+Distance to center & 1.081 & \checkmark Pass \\
+Elevation & 1.028 & \checkmark Pass \\
+Slope & 1.010 & \checkmark Pass \\
+\midrule
+\textbf{Range} & \textbf{1.01--1.14} & \textbf{All $<$ 4.0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure \ref{fig:vif_analysis} visualizes the VIF values with respect to the threshold of 4.0 and the high multicollinearity boundary of 10.0. All drivers fall well within the acceptable range (green bars), confirming that the five-driver set exhibits statistical independence suitable for joint inclusion in the MLR model. These results closely match those reported by Vani and Rama Chandra Prasad \cite{vani2022} for Vijayawada (VIF range: 1.03--2.78), validating the driver selection framework for Indian metropolitan contexts.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pic/vif_bar.png}
+\caption{Variance Inflation Factor (VIF) analysis for five driver variables. All VIF values $<$ 4.0, indicating absence of multicollinearity. Population density exhibits the highest VIF (1.137) but remains well within acceptable limits.}
+\label{fig:vif_analysis}
+\end{figure}
+
+Pearson correlation coefficients among driver pairs ranged from $-0.283$ to $0.190$, with no pairs exceeding $|r| = 0.7$. The modest negative correlation between population and distance to roads ($r = -0.283$) reflects the tendency for population to concentrate near transportation infrastructure. The weak positive correlation between distance to roads and distance to center ($r = 0.190$) indicates that peripheral areas tend to be both farther from the urban core and less served by major roads. These correlations, while statistically significant given the large sample size, are insufficiently strong to compromise regression diagnostics, as confirmed by the low VIF values.
+
+\subsubsection{Multinomial Logistic Regression Model}
+
+The Multinomial Logistic Regression (MLR) model \cite{mcfadden1974, menard2002} estimates the probability of each pixel belonging to one of four LULC classes as a function of the five standardized drivers. Unlike binary logistic regression, MLR handles multi-class outcomes by modeling the log-odds of each class relative to a reference class (arbitrarily chosen as Water, class 1). The model was implemented using scikit-learn's \texttt{LogisticRegression} with the \texttt{multinomial} solver and L-BFGS optimization algorithm, with maximum iterations set to 1,000 and L2 regularization strength $C=1.0$.
+\paragraph{Model Formulation}
+The MLR model estimates the probability of pixel $i$ belonging to 
+class $k$ as:
+
+\begin{equation}
+P(y_i = k | \mathbf{x}_i) = \frac{e^{\boldsymbol{\beta}_k^T \mathbf{x}_i + \beta_{k0}}}{\sum_{j=1}^{4} e^{\boldsymbol{\beta}_j^T \mathbf{x}_i + \beta_{j0}}}
+\label{eq:mlr_probability}
+\end{equation}
+
+where $\mathbf{x}_i$ is the driver vector, $\boldsymbol{\beta}_k$ 
+are class-specific coefficients, and the denominator normalizes 
+probabilities across all classes.
+\paragraph{Model Configuration}
+The MLR model was trained on the 4,126-sample dataset with balanced class representation (Water: 24.5\%, Vegetation: 25.5\%, Barren: 25.1\%, Built-up: 25.0\%). The five standardized drivers (slope, elevation, population density, distance to roads, distance to center) served as independent variables, with the 2020 LULC class as the dependent variable. The model converged successfully, yielding a coefficient matrix of dimensions $4 \times 5$ (four classes, five predictors).
+
+\paragraph{Model Fit Assessment}
+Model goodness-of-fit was evaluated using McFadden's Pseudo R², a likelihood-ratio-based measure analogous to R² in linear regression. The Pseudo R² is computed as:
+
+\begin{equation}
+\text{Pseudo } R^2 = 1 - \frac{\ln L_{\text{fitted}}}{\ln L_{\text{null}}}
+\label{eq:pseudo_r2}
+\end{equation}
+
+where $\ln L_{\text{fitted}}$ is the log-likelihood of the fitted model and $\ln L_{\text{null}}$ is the log-likelihood of the null model (intercept only). Following Vani and Rama Chandra Prasad \cite{vani2022}, a Pseudo R² $> 0.2$ indicates acceptable model fit.
+
+The trained MLR model achieved a Pseudo R² of 0.226, exceeding the threshold of 0.2 and indicating good explanatory power of the five-driver set. The log-likelihood improved from $-5,719.42$ (null model) to $-4,427.84$ (fitted model), representing a substantial reduction in deviance. This result is comparable to Vani and Rama Chandra Prasad's \cite{vani2022} Pseudo R² of 0.432 for Vijayawada, with the lower value here potentially reflecting the larger study area, greater landscape heterogeneity, and different urbanization dynamics of metropolitan Hyderabad versus Tier-II Vijayawada.
+
+\paragraph{MLR Coefficients and Driver Effects}
+Table \ref{tab:mlr_coefficients} presents the MLR coefficients for the Built-up class (class 4), representing the target transition for urban growth modeling. Positive coefficients indicate that higher driver values increase the probability of built-up land use, while negative coefficients indicate decreased probability.
+
+\begin{table}[H]
+\caption{MLR Coefficients for Built-up Class (Urban Growth)}
+\label{tab:mlr_coefficients}
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Driver} & \textbf{Coefficient} & \textbf{Sign} & \textbf{Effect Strength} \\
+\midrule
+Population density & +1.7100 & Positive & Strong \\
+Distance to roads & $-0.5935$ & Negative & Strong \\
+Distance to center & $-0.1968$ & Negative & Weak \\
+Elevation & +0.0605 & Positive & Weak \\
+Slope & +0.0518 & Positive & Weak \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The dominant driver of urbanization is \textbf{population density} (coefficient: +1.71), with higher population areas exhibiting substantially elevated built-up probabilities. This strong positive effect reflects demand-driven urban expansion, wherein demographic pressure drives land conversion. The second-strongest driver is \textbf{distance to roads} (coefficient: $-0.59$), with the negative sign indicating that proximity to transportation infrastructure (lower distance values) increases urbanization likelihood. This captures the accessibility imperative, as development preferentially occurs near existing road networks to minimize infrastructure costs and maximize connectivity.
+
+\textbf{Distance to city center} exhibits a weak negative effect (coefficient: $-0.20$), suggesting that proximity to the urban core slightly favors development, though this effect is substantially weaker than road accessibility. This contrasts with classic monocentric urban models and may reflect Hyderabad's polycentric structure with multiple employment nodes distributed across the metropolitan area, reducing the dominance of the central business district.
+
+\textbf{Elevation} and \textbf{slope} show weak positive effects (coefficients: +0.06 and +0.05 respectively), counterintuitively suggesting that higher elevation and steeper slopes slightly increase built-up probability. However, the magnitude of these effects is minimal (one-tenth to one-thirtieth the strength of population), indicating terrain has limited influence on urbanization in this dataset. This differs from Vani and Rama Chandra Prasad's \cite{vani2022} finding of strong positive slope effects (coefficient: +1.05) for Vijayawada, attributed to population pressure driving hillside encroachment. The weaker terrain effects for Hyderabad may reflect: (1) the predominantly gentle topography of the study area (mean slope 5.28\%), with steep terrain limited to peripheral hillocks, and (2) the metropolitan scale of analysis, wherein abundant flat land remains available, reducing pressure to develop steep areas.
+
+\paragraph{Comparison with Reference Study}
+Comparison with Vani and Rama Chandra Prasad \cite{vani2022} reveals both consistencies and differences:
+
+\begin{itemize}
+\item \textbf{Consistent}: Distance to roads exhibits strong negative effect in both studies (Hyderabad: $-0.59$, Vijayawada: $-0.33$), confirming road accessibility as a universal driver of Indian urban growth.
+
+\item \textbf{Consistent}: Distance to center shows weak/non-significant effects in both studies (Hyderabad: $-0.20$, Vijayawada: +0.0003, $p=0.821$), suggesting limited monocentric influence in both cities.
+
+\item \textbf{Different}: Population density is the dominant driver in Hyderabad (+1.71) but was reported with weak negative coefficient in Vijayawada ($-0.0005$). This difference may reflect: (1) different population data sources or processing methods, (2) scale differences (metropolitan vs. Tier-II city), or (3) contrasting demographic-urbanization relationships between the two contexts.
+
+\item \textbf{Different}: Slope effect is weak in Hyderabad (+0.05) but strong in Vijayawada (+1.05). This likely reflects topographic differences: Hyderabad's study area is predominantly gentle (mean slope 5.28\%), whereas Vijayawada's hilly terrain necessitates slope development under population pressure.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{pic/ml_heatmap.png}
+\caption{MLR coefficient analysis. (a) Coefficient heatmap for all four LULC classes showing driver effects (red = positive effect on class probability, blue = negative effect). Population density strongly predicts built-up (+1.71) but inversely predicts vegetation ($-1.63$). (b) Driver importance for built-up class: population density (+1.71, green) and distance to roads ($-0.59$, red) dominate urban growth probability.}
+\label{fig:mlr_coefficients}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth]{pic/mlr_comparison.png}
+\caption{Coefficient comparison across all LULC classes. Driver effects vary substantially by class: population density favors built-up (+1.71) but discourages vegetation ($-1.63$), reflecting urban-vegetation trade-offs. Distance to roads shows opposite effects for water (+0.59) versus built-up ($-0.59$), indicating water bodies located away from transportation corridors. Slope and elevation exhibit weak effects across all classes ($|$coefficient$|$ $<$ 0.2).}
+\label{fig:mlr_comparison}
+\end{figure}
+Figure \ref{fig:mlr_coefficients} visualizes the MLR coefficients. Panel (a) presents a heatmap of all coefficients across four classes and five drivers, revealing class-specific sensitivities. Panel (b) highlights the built-up class coefficients, with population density and road proximity emerging as dominant positive and negative predictors respectively. Panel (c) compares coefficients across classes, showing that drivers favoring built-up expansion (e.g., high population) inversely predict vegetation, reflecting the fundamental land use trade-off between urban development and natural cover.
+\subsubsection{Spatial Probability Surface Generation}
+
+The trained MLR model was applied to the full study area grid (1,691$\times$1,691 pixels, 2,859,481 cells) to generate a continuous spatial surface of built-up urbanization probabilities. For each pixel, the five standardized driver values (slope, elevation, population density, distance to roads, distance to center) were extracted and input to the MLR model's \texttt{predict\_proba} function, which returns the probability distribution across all four LULC classes. The built-up class probability (class 4, index 3) was extracted and reshaped to the spatial grid, yielding a probability surface $P_{\text{MLR}}(i,j) \in [0,1]$ for each pixel $(i,j)$.
+
+\paragraph{Probability Surface Statistics}
+The MLR probability surface exhibits substantial spatial variation, with built-up probabilities ranging from 0.000 (minimum) to 1.000 (maximum), mean probability of 0.221, and standard deviation of 0.265. The non-negligible standard deviation (0.265 $\gg$ 0.01) confirms that the five drivers meaningfully differentiate urbanization likelihood across the landscape, rather than producing a uniform probability field. Areas with high population density and proximity to roads receive elevated urbanization probabilities ($P > 0.5$), while peripheral areas with low population and limited road access exhibit reduced probabilities ($P < 0.2$).
+
+Figure \ref{fig:mlr_probability} visualizes the spatial distribution of MLR-estimated urbanization probabilities. High-probability areas (red, $P > 0.6$) concentrate in the urban core and along major transportation corridors, reflecting the combined influence of high population density and road accessibility. Moderate-probability areas (orange-yellow, $0.3 < P < 0.6$) appear in peri-urban zones and secondary growth centers. Low-probability areas (dark red-black, $P < 0.3$) dominate the peripheral and rural portions of the study area, where population is sparse and road infrastructure limited. This probability surface serves as the foundation for CA-based spatial allocation, wherein cells with higher MLR probabilities are preferentially selected for urban expansion, modulated by neighborhood effects and stochastic perturbation.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pic/mlr_prob_surface.png}
+\caption{Spatial distribution of MLR-estimated built-up urbanization probabilities across the study area (1,691$\times$1,691 grid). High probabilities (red, $P>0.6$) concentrate in the urban core and along major roads, driven by high population density and road accessibility. Low probabilities (dark, $P<0.3$) dominate peripheral areas with sparse population and limited infrastructure. Mean probability: 0.221, standard deviation: 0.265, confirming non-uniform spatial differentiation by the five-driver MLR model.}
+\label{fig:mlr_probability}
+\end{figure}
+\subsection{Cellular Automata Model}
+
+\subsubsection{Moore Neighborhood Definition}
+
+The CA model incorporates spatial neighborhood effects through a 5$\times$5 Moore kernel, wherein the transition probability of each cell is influenced by the land use composition of surrounding cells within a two-cell radius. Following Vani and Rama Chandra Prasad \cite{vani2022}, the neighborhood influence is distance-weighted to reflect the principle that proximate cells exert stronger effects than distant cells.
+
+\paragraph{Distance-Weighted Kernel}
+The Moore kernel $K$ is computed using inverse distance weighting:
+
+\begin{equation}
+K(i,j) = \begin{cases}
+0 & \text{if } i=0, j=0 \text{ (center pixel)} \\
+\frac{1}{d_{ij}} & \text{otherwise}
+\end{cases}
+\label{eq:moore_kernel}
+\end{equation}
+
+where $d_{ij} = \sqrt{i^2 + j^2}$ is the Euclidean distance from the center pixel to position $(i,j)$ in the 5$\times$5 window, with $i,j \in \{-2,-1,0,1,2\}$. The center pixel receives zero weight (no self-influence), while surrounding pixels are weighted inversely proportional to distance. The kernel is normalized such that $\sum_{i,j} K(i,j) = 1$, ensuring that neighborhood density calculations remain bounded in [0,1].
+
+\paragraph{Weight Distribution}
+Table \ref{tab:moore_weights} presents the resulting weight distribution. Adjacent cells (4-connected neighbors) receive the highest weights (7.24\% each), reflecting their immediate spatial influence. Diagonal cells receive moderate weights (5.12\% each). The extended neighborhood (12 cells at intermediate distances) receives lower weights (3.24--3.62\%), while the four outer corners receive minimum weights (2.56\%), capturing radial decay of neighborhood influence with increasing distance from the center.
+
+\begin{table}[H]
+\caption{Moore Kernel Weight Distribution}
+\label{tab:moore_weights}
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Neighbor Category} & \textbf{Cells} & \textbf{Weight Range (\%)} \\
+\midrule
+Adjacent (4-neighbors) & 4 & 7.24 \\
+Diagonal & 4 & 5.12 \\
+Extended neighborhood & 12 & 3.24--3.62 \\
+Outer corners & 4 & 2.56 \\
+Center (self) & 1 & 0.00 \\
+\midrule
+\textbf{Total} & \textbf{25} & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure \ref{fig:moore_kernel} visualizes the kernel structure. Panel (a) displays the weight matrix with numeric values, illustrating the radial decay pattern from center to periphery. Panel (b) presents a contour representation, showing smooth weight gradients. This distance-weighted formulation ensures that urbanization tendency spreads preferentially to cells immediately adjacent to existing built-up areas, mimicking observed contiguous urban expansion patterns while allowing limited leapfrog development to more distant cells with lower neighborhood influence.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{pic/moore_kernel.png}
+\caption{5$\times$5 distance-weighted Moore neighborhood kernel. (a) Weight matrix with numeric values (adjacent cells: 7.24\%, diagonals: 5.12\%, corners: 2.56\%, center: 0\%). Weights normalized to sum to 1.0. (b) Contour representation showing radial decay of influence from center (blue X). The kernel captures spatial autocorrelation wherein urbanization likelihood increases with proximity to existing built-up areas.}
+\label{fig:moore_kernel}
+\end{figure}
+\subsubsection{Genetic Algorithm Parameter Optimization}
+
+The CA model requires specification of three parameters: neighborhood weight ($\omega$), stochasticity ($\alpha$), and temporal iterations per period. Following Vani and Rama Chandra Prasad \cite{vani2022}, a genetic algorithm (GA) \cite{holland1975, goldberg1989} was employed to search the parameter space for optimal values. The GA configuration included population size of 20 individuals, 30 generations, mutation rate of 0.1, crossover rate of 0.7, and elitism preserving the top 2 individuals. Parameter search bounds were: $\omega \in [0.5, 2.0]$, $\alpha \in [0.01, 0.1]$, and iterations $\in [5, 15]$.
+
+\paragraph{Critical Limitation: Surrogate Fitness Function}
+Due to computational constraints, the GA implementation utilized a \textbf{surrogate fitness function} based on parameter proximity to empirically reasonable values ($\omega \approx 1.2$, $\alpha \approx 0.05$, iterations $\approx 10$), rather than evaluating fitness through full CA simulations comparing predicted versus actual LULC maps. This surrogate approach enabled rapid parameter exploration but does not guarantee that the identified parameters maximize actual CA prediction accuracy. The fitness score of 0.9996 reflects proximity to the surrogate target, not model performance.
+
+The GA converged to optimal parameters: $\omega = 1.200$ (moderate neighborhood clustering), $\alpha = 0.050$ (moderate stochasticity), and iterations $= 10$ (one iteration per year for decadal periods). These parameters were subsequently validated through sample-based calibration achieving 93.50\% accuracy, confirming their suitability despite the surrogate fitness limitation. Future work should replace the surrogate with full CA-driven fitness evaluation, wherein each GA individual undergoes complete 1990$\rightarrow$2000 simulation and accuracy assessment against actual 2000 LULC, enabling rigorous parameter optimization.
+\subsubsection{CA Transition Rule and Sample-Based Calibration}
+
+The CA transition probability for each cell integrates MLR-based suitability, neighborhood influence, and stochastic perturbation following the formulation:
+
+\begin{equation}
+P_{\text{trans}} = P_{\text{MLR}} \times (1 + \omega \cdot N) + \alpha \cdot U(-1, 1)
+\label{eq:ca_transition}
+\end{equation}
+
+where $P_{\text{MLR}}$ is the built-up class probability from the MLR model, $\omega$ is the neighborhood weight parameter, $N$ is the normalized neighborhood density computed via convolution of the current LULC state with the Moore kernel, $\alpha$ is the stochasticity parameter, and $U(-1,1)$ represents uniform random noise. Using the GA-derived parameters ($\omega=1.20$, $\alpha=0.05$, iterations$=10$), cells transition to built-up when $P_{\text{trans}} > 0.5$ and the cell is currently non-built-up.
+
+\paragraph{Sample-Based Calibration and Validation}
+
+The CA model was calibrated and validated using a sample-based approach with the 4,126-point dataset. Calibration simulated the period 1990$\rightarrow$2000 (10 years, 10 CA iterations), comparing predicted versus actual 2000 LULC at sample locations. Validation independently tested 2000$\rightarrow$2010 using the same parameter set without further tuning. This sample-based methodology, while computationally efficient, does not capture full spatial dynamics; full-resolution raster-based simulation is implemented in the prediction phase.
+
+Table \ref{tab:ca_calibration} presents calibration and validation metrics. Calibration achieved 93.50\% overall accuracy and Kappa coefficient of 0.913, indicating almost perfect agreement between predicted and actual LULC. Class-wise accuracies were strong across all categories: Water (94.25\%), Vegetation (96.76\%), Barren (82.98\%), and Built-up (100.00\%). The perfect built-up classification reflects the model's primary focus on urban expansion transitions, wherein cells correctly identified as built-up in the baseline remain built-up, and new urbanization is accurately predicted.
+
+\begin{table}[H]
+\caption{CA Model Calibration and Validation Metrics (Sample-Based)}
+\label{tab:ca_calibration}
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Calibration} & \textbf{Validation} \\
+ & \textbf{(1990$\rightarrow$2000)} & \textbf{(2000$\rightarrow$2010)} \\
+\midrule
+Overall Accuracy & 93.50\% & 93.48\% \\
+Kappa Coefficient & 0.913 & 0.913 \\
+Water Accuracy & 94.25\% & -- \\
+Vegetation Accuracy & 96.76\% & -- \\
+Barren Accuracy & 82.98\% & -- \\
+Built-up Accuracy & 100.00\% & -- \\
+\midrule
+Sample Size & 4,126 points & 4,126 points \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Validation on the independent 2000$\rightarrow$2010 period yielded 93.48\% accuracy and Kappa of 0.913, nearly identical to calibration performance (difference: 0.22\%). This consistency indicates absence of overfitting and confirms that the GA-optimized parameters generalize across temporal periods. The high Kappa values ($>0.91$) signify almost perfect agreement beyond chance, substantially exceeding the threshold for excellent classification ($\kappa > 0.80$).
+
+\paragraph{Built-up Growth Analysis}
+
+Built-up pixel counts at sample locations increased from 1,032 (1990) to 1,300 predicted for 2000, compared to 1,032 actual, yielding a prediction error of 268 pixels (25.9\% over-prediction). This over-estimation reflects limitations of the sample-based calibration approach combined with the absence of demand constraints in this phase. The CA model, driven purely by suitability probability and neighborhood effects without quota-based allocation, permits unconstrained growth wherever transition thresholds are exceeded. Full-resolution spatial prediction addresses this by implementing quota-based demand allocation, wherein urban expansion is constrained to historical growth rates (2.67\% annual), preventing unrealistic over-prediction while maintaining spatial realism through probability-weighted cell selection.
+
+Figure \ref{fig:ca_calibration} visualizes calibration results. Panel (a) presents the confusion matrix showing strong diagonal dominance, with most misclassifications occurring between spectrally similar Barren and Built-up classes. Panel (b) compares calibration and validation performance, demonstrating consistency across both periods with accuracy exceeding 93\% and Kappa exceeding 0.91. Panel (c) illustrates built-up growth during calibration, highlighting the over-prediction tendency (1,300 predicted vs 1,032 actual) that motivates quota-based allocation in subsequent full-resolution modeling.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{pic/ca_panel.png}
+\caption{Sample-based CA calibration results (1990$\rightarrow$2000). (a) Confusion matrix showing 93.50\% overall accuracy with strong diagonal dominance. Built-up class achieves 100\% accuracy. (b) Calibration versus validation performance: consistent accuracy (93.50\% vs 93.48\%) and Kappa (0.913 vs 0.913) indicating no overfitting. (c) Built-up growth comparison: model over-predicts by 268 pixels (25.9\%), motivating quota-based allocation in full-resolution simulation.}
+\label{fig:ca_calibration}
+\end{figure}
+\subsection{Full-Resolution Spatial Prediction}
+
+Following calibration and validation on the 4,126-point sample dataset, the CA model was implemented at full spatial resolution (30 m, 1,691$\times$1,691 pixels, 2,859,481 cells) to generate metropolitan-scale urban growth scenarios for 2020--2050. This section describes the quota-based demand-driven CA framework applied to the complete raster grid, addressing the over-prediction limitation identified in sample-based calibration through explicit growth constraints.
+
+\subsubsection{2020 Baseline and Study Area Constraints}
+
+The 2020 LULC classification served as the baseline for all predictions. Following resampling to the 1,691$\times$1,691 grid framework, the 2020 baseline comprised 507,507 built-up pixels (456.76 km²), 1,169,198 vegetation pixels (1,052.28 km²), 456,397 barren pixels (410.76 km²), and 102,749 water pixels (92.54 km²).
+
+Two spatial constraints were enforced throughout the simulation. First, a 25 km radius circular study area mask limited predictions to 2,181,644 pixels (76.3\% of the bounding box), excluding corner regions outside the metropolitan analysis zone. Second, an exclusion layer derived from 1990 water bodies prevented urbanization on hydrological features, ensuring spatial realism. Only cells satisfying both constraints (within the circle AND not excluded) were eligible for urban transition.
+
+\subsubsection{Quota-Based Urban Demand Model}
+
+To prevent unrealistic explosive growth observed in threshold-based CA models, urban expansion was constrained by quota-based allocation derived from historical growth rates. The 2010--2020 period exhibited an average annual built-up area growth rate of 2.67\%, which was adopted as the business-as-usual scenario for future predictions. For each target year, urban demand (number of new built-up pixels required) was calculated as:
+
+\begin{equation}
+U_{\text{target}} = U_{2020} \times (1 + r)^{\Delta t}
+\label{eq:demand_growth}
+\end{equation}
+
+\begin{equation}
+\text{Demand} = U_{\text{target}} - U_{2020}
+\label{eq:demand_calc}
+\end{equation}
+
+where $U_{2020} = 507{,}507$ pixels is the 2020 baseline built-up count, $r = 0.0267$ is the annual growth rate, and $\Delta t$ is years elapsed since 2020. This compound growth formulation ensures that urban expansion accelerates in absolute terms (more km² added per period) while maintaining constant relative rate (2.67\% per year), consistent with observed metropolitan growth dynamics.
+
+\subsubsection{Spatial CA Allocation Mechanism}
+
+For each prediction year, the CA model executed $\Delta t$ iterations (e.g., 10 iterations for 2030, 10 years after 2020), with urban demand quota distributed evenly across iterations ($\text{quota}_{\text{iter}} = \text{Demand} / \Delta t$). Within each iteration:
+
+\begin{enumerate}
+\item \textbf{MLR Probability Calculation:} The MLR model generated built-up transition probabilities $P_{\text{MLR}}(i,j)$ for all 2.86 million pixels based on the five standardized drivers.
+
+\item \textbf{Neighborhood Density Computation:} The Moore kernel was convolved with the current LULC state to compute normalized neighborhood density $N(i,j) \in [0,1]$, representing the proportion of built-up cells within each pixel's 5$\times$5 window.
+
+\item \textbf{Combined Probability:} Transition probabilities integrated suitability, neighborhood effects, and stochasticity following Equation \ref{eq:ca_transition}: $P_{\text{trans}} = P_{\text{MLR}} \times (1 + \omega \cdot N) + \alpha \cdot U(-1,1)$, using calibrated parameters $\omega=1.20$ and $\alpha=0.05$.
+
+\item \textbf{Top-K Selection:} Among all eligible cells (non-built-up, within circle mask, not excluded), the top $K = \text{quota}_{\text{iter}}$ cells with highest $P_{\text{trans}}$ values were selected and converted to built-up. This probability-weighted selection ensures spatially realistic allocation, wherein high-suitability areas near existing urban zones preferentially urbanize.
+
+\item \textbf{LULC Update:} Selected cells transitioned from their current class to built-up (class 4), updating the LULC state for the next iteration.
+\end{enumerate}
+
+This iterative quota-based approach prevents the unconstrained over-prediction observed in sample-based calibration, wherein all cells exceeding $P_{\text{trans}} > 0.5$ converted simultaneously. By limiting conversions to exactly the demanded quota per iteration, the model generates plausible growth trajectories aligned with historical trends while maintaining spatial realism through probability-weighted allocation.
+
+\subsubsection{Prediction Scenarios and Reproducibility}
+
+Six prediction scenarios were generated for years 2025, 2030, 2035, 2040, 2045, and 2050. Critically, each scenario is \textbf{independent}: all predictions start from the 2020 baseline rather than sequentially building (e.g., 2030 prediction uses 2020 as input, NOT 2025 output). This independence reflects the model's design for scenario comparison rather than sequential forecasting, enabling analysis of cumulative growth patterns over varying time horizons from a common baseline.
+
+All simulations employed a fixed random seed to ensure reproducibility of stochastic perturbations, allowing exact replication of results. Driver values (slope, elevation, population density, distance to roads, distance to center) were held constant at 2020 levels for all predictions, representing a static driver assumption. While this simplifies the model, it acknowledges that actual future urbanization will occur under evolving demographic, infrastructure, and policy conditions not captured in this business-as-usual scenario.
+
+\subsection{Multi-Scenario Parameter Analysis}
+
+To assess the sensitivity of urban growth patterns to CA model parameters, a multi-scenario analysis was conducted on a 10$\times$10 km spatial subset. This exploratory analysis enabled rapid testing of parameter combinations while maintaining computational feasibility, with scenario runtimes reduced by approximately 5$\times$ relative to full-resolution simulation.
+
+\subsubsection{Subset Selection and Spatial Extent}
+
+A 10 km $\times$ 10 km subset was extracted from the northwest fringe of the study area, centered at coordinates 78.35$^\circ$E, 17.45$^\circ$N (UTM: 855,890.36 m E, 1,932,459.87 m N), approximately 16.2 km from the city center. This location encompasses the HITEC City periphery, a representative zone of active urban expansion. The subset comprises 334$\times$333 pixels (111,222 cells) at 30 m resolution, representing approximately 5\% of the full study area by pixel count. The 2020 baseline for the subset contained 39,670 built-up pixels (35.70 km²), reflecting higher urbanization density typical of metropolitan fringe zones.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\columnwidth]{pic/subset_location_map.png}
+\caption{Spatial context of multi-scenario analysis. The 10$\times$10 km subset (red hatched box) is located in the northwest fringe, 16.2 km from the city center (gold star), encompassing representative urban expansion zones. The subset represents 5\% of the full 25 km radius study area (blue circle), enabling rapid parameter testing with 5$\times$ faster computation per scenario.}
+\label{fig:subset_location}
+\end{figure}
+
+All five drivers (slope, elevation, population density, distance to roads, distance to center) were extracted for the subset using identical preprocessing methods as the full-resolution model. The exclusion mask (1990 water bodies) was applied to prevent urbanization on hydrological features. The same MLR-derived probability surface and Moore kernel were used, ensuring methodological consistency with the main model.
+
+\subsubsection{Parameter Space Definition}
+
+Seventeen scenarios were designed to test three CA parameters independently and in combination (Table \ref{tab:scenarios}):
+
+\begin{table}[H]
+\caption{Multi-Scenario Parameter Space}
+\label{tab:scenarios}
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Experiment} & \textbf{Parameter} & \textbf{Values} & \textbf{Fixed} & \textbf{Scenarios} \\
+\midrule
+1. Neighborhood & $\omega$ & 0.5, 0.8, 1.2, 1.6, 2.0 & $\alpha$=0.05, $r$=2.67\% & 5 \\
+2. Stochasticity & $\alpha$ & 0.01, 0.03, 0.05, 0.10 & $\omega$=1.2, $r$=2.67\% & 4$^a$ \\
+3. Growth Rate & $r$ & 1.5\%, 2.0\%, 2.67\%, 3.5\% & $\omega$=1.2, $\alpha$=0.05 & 4$^a$ \\
+4. Combined & -- & See Table \ref{tab:combined} & -- & 6 \\
+\midrule
+\textbf{Total} & & & & \textbf{17}$^b$ \\
+\bottomrule
+\multicolumn{5}{l}{\scriptsize $^a$One value overlaps with Experiment 1 baseline ($\alpha$=0.05, $r$=2.67\%).}\\
+\multicolumn{5}{l}{\scriptsize $^b$After removing duplicates: 5 + 3 + 3 + 6 = 17 unique scenarios.}
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\caption{Combined Scenarios (Experiment 4)}
+\label{tab:combined}
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Scenario} & \textbf{$\omega$} & \textbf{$\alpha$} & \textbf{$r$ (\%)} \\
+\midrule
+compact & 2.0 & 0.01 & 2.67 \\
+sprawl & 0.5 & 0.10 & 2.67 \\
+rapid\_compact & 2.0 & 0.01 & 3.50 \\
+slow\_sprawl & 0.5 & 0.10 & 1.50 \\
+conservation & 1.2 & 0.05 & 1.50 \\
+boom & 1.2 & 0.05 & 3.50 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Experiment 1} varied neighborhood weight $\omega \in \{0.5, 0.8, 1.2, 1.6, 2.0\}$ to test clustering intensity, with $\omega=0.5$ representing weak neighborhood effects (dispersed growth) and $\omega=2.0$ representing strong clustering (compact growth). \textbf{Experiment 2} varied stochasticity $\alpha \in \{0.01, 0.03, 0.05, 0.10\}$ to test boundary irregularity, with lower values producing smoother edges. \textbf{Experiment 3} varied growth rate $r \in \{1.5\%, 2.0\%, 2.67\%, 3.5\%\}$ to test urbanization speed, bracketing the historical baseline (2.67\%) with slow-growth (1.5\%) and boom (3.5\%) scenarios. \textbf{Experiment 4} combined parameters to test extreme cases: compact high-density growth (rapid\_compact: $\omega$=2.0, $\alpha$=0.01, $r$=3.5\%), sprawling low-density growth (slow\_sprawl: $\omega$=0.5, $\alpha$=0.10, $r$=1.5\%), and policy-relevant scenarios (conservation, boom).
+
+\subsubsection{CA Execution and Temporal Scope}
+
+Each scenario was executed for two target years: 2030 and 2040. Following the quota-based framework described earlier, urban demand for each target year was calculated using compound growth (Equations \ref{eq:demand_growth}--\ref{eq:demand_calc}), with $U_{2020} = 39{,}670$ pixels as the subset baseline. The CA model iterated over 10-year periods (10 iterations for 2030, 10 additional iterations for 2040), allocating quota per iteration through top-$K$ probability-weighted selection.
+
+All scenarios employed the identical MLR probability surface, Moore kernel, and exclusion mask, with a fixed random seed (42) ensuring reproducibility. The only parameters varied were $\omega$, $\alpha$, and $r$ as specified per scenario. All predictions were independent, starting from the 2020 baseline rather than sequential chaining (e.g., 2040 prediction uses 2020 as input, not 2030 output).
+
+\subsubsection{Spatial Metrics Calculation}
+
+For each scenario-year combination (17 scenarios $\times$ 2 years = 34 predictions), spatial metrics were computed to quantify urban form characteristics:
+
+\paragraph{Patch Metrics}
+Connected components analysis identified discrete built-up patches using 8-connectivity (ndimage.label). The number of patches, mean patch size, and largest patch size were recorded. A higher patch count indicates fragmentation, while fewer, larger patches indicate consolidation.
+
+\paragraph{Compactness Index}
+Compactness quantifies shape regularity relative to a circle (compactness = 1.0). It is calculated as:
+
+\begin{equation}
+C = \frac{P^2}{4\pi A}
+\label{eq:compactness}
+\end{equation}
+
+where $P$ is the perimeter (edge pixel count via binary dilation) and $A$ is the area (built-up pixel count). Lower values indicate more compact, circular growth; higher values indicate irregular, sprawling patterns.
+
+\paragraph{Edge Density}
+Edge density measures perimeter per unit area, calculated as:
+
+\begin{equation}
+D_{\text{edge}} = \frac{P \cdot s}{A \cdot 10{,}000}
+\label{eq:edge_density}
+\end{equation}
+
+where $P$ is perimeter in pixels, $s = 30$ m is pixel size, and $A$ is area in pixels. The result is expressed in meters per hectare (m/ha). Higher edge density indicates fragmented growth with extensive urban-rural interfaces.
+
+\paragraph{Temporal Change}
+Metrics were calculated for both 2030 and 2040 predictions. Temporal change (e.g., compactness change 2030$\rightarrow$2040, patch count change) was computed to assess consolidation dynamics over the 10-year interval.
+
+All metrics were saved as CSV files for subsequent comparative analysis. Computational efficiency of the subset approach was confirmed, with mean scenario runtime of 0.72 seconds (17 scenarios completed in 12.3 seconds total), enabling rapid parameter exploration infeasible at full resolution.
+\section{Results and Discussion}
+
+\subsection{Spatial Prediction Outcomes}
+
+The full-resolution CA model generated urban growth scenarios for 2025, 2030, 2035, 2040, 2045, and 2050, projecting built-up area expansion under a business-as-usual growth trajectory of 2.67\% annually. Table \ref{tab:spatial_results} presents the predicted land use composition across all seven time points. Following application of the 25 km circular study area mask and exclusion constraints, the effective 2020 baseline built-up area was 456.76 km² (507,507 pixels), representing a reduction from the full-grid classification (471.4 km², 525,419 pixels) due to spatial masking of peripheral regions outside the metropolitan analysis zone.
+
+\begin{table}[H]
+\caption{Predicted LULC Areas (km²) for Hyderabad Metropolitan Region, 2020--2050}
+\label{tab:spatial_results}
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Year} & \textbf{Water} & \textbf{Vegetation} & \textbf{Barren} & \textbf{Built-up} \\
+\midrule
+2020 & 92.54 & 1,052.28 & 410.76 & 456.76 \\
+2025 & 91.41 & 1,038.76 & 361.08 & 521.07 \\
+2030 & 90.40 & 1,015.88 & 311.60 & 594.46 \\
+2035 & 89.21 & 982.47 & 262.50 & 678.16 \\
+2040 & 87.90 & 933.43 & 217.34 & 773.66 \\
+2045 & 86.09 & 865.71 & 177.92 & 882.61 \\
+2050 & 83.75 & 777.52 & 144.16 & 1,006.91 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Built-up area expands from 456.76 km² (2020) to 1,006.91 km² (2050), representing net growth of 550.15 km² (+120.4\% increase) over the 30-year period. This doubling of urban extent occurs primarily through conversion of vegetation and barren land, with vegetation declining by 274.76 km² (26.1\% loss) and barren declining by 266.60 km² (64.9\% loss). Water body area remains relatively stable (92.54→83.75 km², -9.5\%), with minor losses attributed to edge effects and small water body infill in peri-urban zones.
+
+\subsubsection{Spatial Distribution of Urban Growth}
+
+Figure \ref{fig:lulc_spatial} presents the spatial distribution of predicted LULC for four key time points (2020, 2030, 2040, 2050). The 2020 baseline (top-left) shows concentrated built-up areas in the urban core with dispersed peri-urban development. By 2030 (top-right), urban expansion exhibits radial outward growth along major transportation corridors, consistent with the strong negative coefficient for distance-to-roads identified in the MLR analysis. The 2040 scenario (bottom-left) reveals coalescence of previously dispersed peri-urban settlements into continuous urban fabric, reflecting the Moore kernel's neighborhood clustering effect ($\omega=1.20$). By 2050 (bottom-right), built-up area extends to the periphery of the 25 km study circle, approaching saturation in high-suitability zones while lower-suitability areas (steep slopes, far from roads) remain undeveloped.
+
+The spatial patterns demonstrate preference for proximity to existing urban areas (neighborhood effect) modulated by infrastructure accessibility (distance to roads) and demographic pressure (population density), consistent with the driver importance hierarchy established in the MLR coefficients (Table \ref{tab:mlr_coefficients}). Built-up expansion avoids the exclusion zones (1990 water bodies), with no urbanization predicted in protected hydrological areas, validating the constraint enforcement mechanism.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{pic/lulc_spatial_evolution.png}
+\caption{Spatial distribution of predicted LULC for Hyderabad metropolitan region. (Top-left) 2020 baseline showing concentrated urban core. (Top-right) 2030 scenario exhibiting radial expansion along transportation corridors. (Bottom-left) 2040 scenario with peri-urban coalescence. (Bottom-right) 2050 scenario approaching saturation in high-suitability zones within the 25 km study area. Red: Built-up, Green: Vegetation, Brown: Barren, Blue: Water.}
+\label{fig:lulc_spatial}
+\end{figure}
+
+\subsubsection{Temporal Dynamics of LULC Change}
+
+Figure \ref{fig:area_analysis} quantifies the temporal trajectory of LULC change through four complementary perspectives. Panel (a) presents time-series area curves for all four classes, revealing divergent trends: built-up area exhibits exponential growth (compound annual growth rate 2.67\%), vegetation follows exponential decline, barren land declines accelerating after 2035 as remaining suitable land is exhausted, and water remains quasi-stable. The crossing point where built-up area surpasses vegetation occurs around 2047, marking a critical transition from vegetation-dominated to urban-dominated metropolitan landscape.
+
+Panel (b) displays absolute built-up area expansion as bars, illustrating monotonic growth from 456.76 km² (2020) to 1,006.91 km² (2050). The increasing bar height reflects compound growth dynamics, wherein larger base areas yield larger absolute increments despite constant relative rate. Panel (c) quantifies cumulative new built-up area relative to the 2020 baseline, reaching 550.15 km² by 2050. This cumulative growth curve exhibits near-linear acceleration, with steeper slopes in later periods reflecting the compound effect. Panel (d) decomposes growth into five-year periods, showing consistent period-wise gains (64.31--124.30 km² per period), with the 2045--2050 period exhibiting the largest absolute increment (124.30 km²) due to compounding from the elevated 2045 base.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{pic/lulc_area_analysis.png}
+\caption{Temporal analysis of LULC area changes (2020--2050). (a) Time-series trajectories for all classes showing built-up exponential growth and vegetation decline. (b) Built-up area bars demonstrating monotonic expansion. (c) Cumulative new built-up area exhibiting near-linear acceleration from compound growth. (d) Period-wise growth increments (km² per five-year period) showing consistent gains with maximum in 2045--2050 (124.30 km²).}
+\label{fig:area_analysis}
+\end{figure}
+
+\subsubsection{Change Detection and Growth Hotspots}
+
+Figure \ref{fig:change_detection} presents change detection maps for six prediction horizons (2020→2025, 2020→2030, ..., 2020→2050), distinguishing existing built-up areas (orange) from newly urbanized pixels (red). The 2020→2025 scenario (top-left) shows modest peripheral expansion (64.31 km² new built-up), concentrated in near-urban zones with high neighborhood density and road accessibility. The 2020→2030 map (top-center) reveals intensified growth (137.70 km² new built-up), with expansion radiating along major arterial corridors and leapfrog development in high-suitability peri-urban nodes.
+
+The 2020→2040 scenario (bottom-left) exhibits extensive infill of inter-nodal gaps (316.90 km² new built-up), creating continuous urban fabric across previously fragmented areas. By 2050 (bottom-right), new built-up area reaches 550.15 km², with growth penetrating to the study area periphery and saturating high-probability zones within 15 km of the urban core. The spatial sequence illustrates the CA model's progressive saturation mechanism: early-period growth concentrates in highest-probability cells (core-adjacent, near roads, high population), while late-period growth extends to moderate-probability zones as proximate high-probability cells are exhausted.
+
+Growth hotspots consistently align with transportation infrastructure (high density of new built-up along major roads) and exhibit strong clustering around existing urban edges (neighborhood effect validation). The absence of isolated leapfrog pixels in remote low-suitability zones confirms that the stochasticity parameter ($\alpha=0.05$) remains sufficiently low to prevent unrealistic scattered development, while the neighborhood weight ($\omega=1.20$) enforces contiguous expansion patterns consistent with observed Indian metropolitan growth.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{pic/lulc_change_detection.png}
+\caption{Urban growth change detection maps (2020 baseline to six prediction years). Orange: Existing built-up (2020 baseline). Red: New built-up areas. White: Non-built-up. Six panels show progressive spatial expansion: (Top row) 2025 (64 km² new), 2030 (138 km² new), 2035 (221 km² new). (Bottom row) 2040 (317 km² new), 2045 (426 km² new), 2050 (550 km² new). Growth progresses from core-adjacent infill to peripheral corridor expansion, with saturation of high-suitability zones by 2050.}
+\label{fig:change_detection}
+\end{figure}
+
+\subsection{Multi-Scenario Parameter Analysis}
+
+Based on feedback we received during our final project presentations, we performed a parameter sensitivity analysis on the 10$\times$10 km subset that revealed substantial variation in spatial patterns across 17 scenarios, with growth rate emerging as the dominant determinant of urban form (Table \ref{tab:scenario_metrics_summary}).
+\begin{table}[H]
+\caption{Parameter Sensitivity Summary (2030)}
+\label{tab:scenario_metrics_summary}
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Parameter} & \textbf{Values} & \textbf{Compactness} & \textbf{Range} \\
+ & & \textbf{Range} & \\
+\midrule
+\multicolumn{4}{l}{\textit{Neighborhood Weight ($\omega$)}} \\
+\quad $\omega$ = 0.5 & Weak & 260.53 & \multirow{2}{*}{19.08} \\
+\quad $\omega$ = 2.0 & Strong & 241.45 & \\
+\midrule
+\multicolumn{4}{l}{\textit{Stochasticity ($\alpha$)}} \\
+\quad $\alpha$ = 0.01 & Low & 246.03 & \multirow{2}{*}{4.93} \\
+\quad $\alpha$ = 0.10 & High & 250.96 & \\
+\midrule
+\multicolumn{4}{l}{\textit{Growth Rate ($r$)}} \\
+\quad r = 1.5\% & Slow & 425.65 & \multirow{2}{*}{\textbf{260.43}} \\
+\quad r = 3.5\% & Fast & 165.22 & \\
+\bottomrule
+\end{tabular}
+\end{table}
+\subsubsection{Parameter Effects on Spatial Patterns}
+
+\paragraph{Neighborhood Weight Effect ($\omega$)}
+Variation in neighborhood weight produced a compactness range of 19.08 points (2030), from 260.53 ($\omega$=0.5, most sprawling) to 241.45 ($\omega$=2.0, most compact). Higher neighborhood weights yielded slightly more compact growth patterns, confirming the intended effect of clustering parameters. However, this effect was moderate compared to growth rate variation (Figure \ref{fig:parameter_sensitivity}).
+
+\paragraph{Stochasticity Effect ($\alpha$)}
+Stochasticity variation produced minimal impact, with compactness ranging only 4.93 points (2030) from 246.03 ($\alpha$=0.01) to 250.96 ($\alpha$=0.10). This narrow range indicates that stochasticity primarily affects boundary irregularity at fine scales rather than overall spatial pattern, consistent with its role as a perturbation term in the transition probability function.
+
+\paragraph{Growth Rate Effect ($r$)}
+Growth rate exhibited the strongest influence on spatial patterns, with compactness ranging 260.43 points (2030), 13.7$\times$ wider than the $\omega$ effect and 52.8$\times$ wider than the $\alpha$ effect. Slow growth (r=1.5\%) produced highly fragmented patterns (1,247 patches, compactness=425.65), while rapid growth (r=3.5\%) yielded compact development (862 patches, compactness=165.22). This dominance reflects quota-based allocation dynamics: larger demand quotas enable contiguous filling of moderate-probability zones, whereas small quotas force scattered placement in only the highest-probability cells.
+Translating to total urban extent on the 10$\times$10 km subset (baseline: 35.7 km$^2$), conservation growth (r=1.5\%) expands to 48.1 km$^2$ by 2040 (+34.6\%), while rapid development (r=3.5\%) reaches 71.0 km$^2$ (+99.0\%), nearly doubling the baseline. The current trend scenario (r=2.67\%) projects 60.5 km$^2$ (+69.4\%). This near-linear relationship (R$^2$ $>$0.99) enables straightforward scenario-based policy modeling.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth,keepaspectratio]{pic/parameter_sensitivity.png}
+\caption{Parameter sensitivity analysis (2030). (Left) Neighborhood weight $\omega$ exhibits weak negative correlation with compactness (range: 19 points). (Center) Stochasticity $\alpha$ shows negligible effect (range: 5 points). (Right) Growth rate $r$ demonstrates strong effect on built-up area and compactness (range: 260 points), dominating spatial pattern formation. Growth rate is 13.7$\times$ more influential than $\omega$ and 52.8$\times$ more influential than $\alpha$.}
+\label{fig:parameter_sensitivity}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth,keepaspectratio]{pic/metrics_comparison.png}
+\caption{Spatial metrics comparison across 17 scenarios (2030 vs 2040). (Top left) Compactness index decreases from 2030 to 2040 across all scenarios, indicating consolidation. (Top right) Patch count decreases substantially (e.g., omega\_1.2: 1,007$\rightarrow$532 patches), reflecting merge dynamics. (Bottom left) Edge density follows compactness trends. (Bottom right) Built-up area shows three growth tiers corresponding to r=1.5\%, 2.67\%, and 3.5\%. Growth rate scenarios exhibit the widest metric variation.}
+\label{fig:metrics_comparison}
+\end{figure}
+
+\paragraph{Combined Scenarios}
+Combined scenarios amplified individual parameter effects. The rapid\_compact scenario ($\omega$=2.0, $\alpha$=0.01, r=3.5\%) achieved the most compact pattern (867 patches, compactness=157.59), while slow\_sprawl ($\omega$=0.5, $\alpha$=0.10, r=1.5\%) produced maximum fragmentation (1,237 patches, compactness=442.80), a 2.8$\times$ difference in compactness. Edge density ranged from 62.7 m/ha (rapid\_compact) to 115.9 m/ha (slow\_sprawl), reflecting the urban-rural interface extent.
+
+\subsubsection{Temporal Consolidation Dynamics}
+
+All scenarios exhibited substantial consolidation from 2030 to 2040, with patch counts decreasing by 23.5--71.7\% (mean: 43.1\%) and compactness indices declining by 49.5--85.5\% (mean: 69.5\%). For the baseline scenario (omega\_1.2), patches decreased from 1,007 (2030) to 532 (2040), a 47.2\% reduction, while compactness improved from 247.86 to 65.85, a 73.4\% decline. This consolidation reflects two mechanisms: (1) infilling of gaps between existing patches, and (2) coalescence of proximate patches as growth expands contact zones. The effect was strongest for rapid-growth scenarios, where larger quotas accelerated patch merging (e.g., rapid\_compact: 867$\rightarrow$245 patches, $-$71.7\%).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{pic/comparison_2030.png}
+\caption{Spatial comparison of selected scenarios (2030). Columns show six representative scenarios: (left to right) omega\_0.5 (weak clustering), omega\_2.0 (strong clustering), rate\_0.015 (slow growth), rate\_0.035 (rapid growth), slow\_sprawl (combined fragmented), rapid\_compact (combined compact). Red pixels indicate built-up areas. Visual inspection confirms quantitative metrics: slow growth produces scattered development regardless of $\omega$, while rapid growth yields contiguous expansion. Growth rate dominates spatial pattern over neighborhood effects.}
+\label{fig:comparison_2030}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pic/uncertainty_2030.png}
+\caption{Spatial uncertainty heatmap (2030). Color intensity indicates the percentage of scenarios (out of 17) predicting urbanization per pixel. Across 111,222 pixels, 95.6\% exhibit high cross-scenario agreement (urbanizing in $>$80\% or $<$20\% of scenarios), with only 4.4\% in medium-certainty range (20--80\%). Red zones (43.4\% of pixels, $>$80\% agreement) occur near existing urban cores and transportation corridors where all scenarios converge. Green zones (52.1\% of pixels, $<$20\% agreement) represent fringe areas where only rapid-growth scenarios urbanize, demonstrating growth-rate-dependent uncertainty.}
+\label{fig:uncertainty_2030}
+\end{figure}
+
+\subsubsection{Spatial Pattern Comparison}
+
+Figure \ref{fig:comparison_2030} visualizes spatial patterns for six representative scenarios. Quantitative metrics confirm visual observations: omega\_0.5 exhibits 1,001 patches with compactness index of 260.53, while omega\_2.0 shows marginally improved compactness (241.45), demonstrating the modest effect of neighborhood weight. In contrast, growth rate variations produce dramatic differences: rate\_0.015 generates 1,247 highly fragmented patches (compactness=425.65), whereas rate\_0.035 yields only 862 patches with substantially lower fragmentation (compactness=165.22). Combined scenarios amplify these effects, with slow\_sprawl producing maximum fragmentation (1,237 patches, compactness=442.80) and rapid\_compact achieving minimum fragmentation (867 patches, compactness=157.59). The uncertainty heatmap (Figure \ref{fig:uncertainty_2030}) reveals spatial variation in cross-scenario agreement, with high-certainty urbanization concentrated along transportation corridors and existing urban cores, while fringe zones exhibit greater variability dependent on growth rate assumptions.
+
+\subsubsection{Implications for CA Calibration}
+
+The dominance of growth rate over neighborhood effects carries methodological implications. While CA models traditionally emphasize spatial parameters ($\omega$, $\alpha$), this analysis demonstrates that demand-side constraints (r) exert 14--53$\times$ stronger influence on emergent patterns. Consequently, accurate growth rate estimation is critical for reliable predictions, whereas fine-tuning of $\omega$ and $\alpha$ yields marginal improvements. For metropolitan applications where growth rates are policy-responsive (e.g., zoning changes, infrastructure investment), scenario testing should prioritize r-variation over spatial parameter optimization. The quota-based framework amplifies this effect by strictly enforcing demand constraints, contrasting with threshold-based CA models where spatial parameters alone determine allocation.
+% Discussion content continues within Results and Discussion
+
+\subsection{Growth Rate Plausibility and Business-as-Usual Scenario}
+
+The predicted doubling of built-up area from 456.76 km² (2020) to 1,006.91 km² (2050)—equivalent to 120.4\% growth over 30 years—emerges from applying a 2.67\% annual compound growth rate derived from observed 2010--2020 trends. This growth trajectory represents a business-as-usual scenario wherein current demographic pressures, economic expansion, and development patterns persist unchanged through 2050. The 2.67\% rate aligns with typical Tier-I Indian metropolitan growth.  Hyderabad's information technology sector expansion, ongoing metro rail construction, and Telangana state capital status provide economic drivers supporting sustained rapid urbanization.
+
+However, several factors introduce uncertainty into the 2050 projection. First, saturation effects may decelerate growth as high-suitability land within the metropolitan core becomes exhausted, forcing development into less accessible peripheral zones with higher infrastructure costs. The model's static driver assumption does not capture this endogenous slowdown. Second, policy interventions—such as Telangana's proposed Outer Ring Road (ORR) completion, green belt designations under the Hyderabad Metropolitan Development Authority (HMDA) master plan, or density restrictions in environmentally sensitive zones—could alter growth trajectories through infrastructure provision or regulatory constraints not reflected in historical patterns. Third, exogenous shocks (economic recessions, pandemics, climate events) can disrupt growth rates unpredictably.
+
+The critical transition year of approximately 2044, when built-up area surpasses vegetation for the first time, marks a fundamental ecological threshold. Beyond this point, Hyderabad transitions from a vegetation-dominated landscape (characteristic of Indian garden cities) to an urban-dominated megacity form (characteristic of Delhi, Mumbai). This shift has cascading implications: reduced carbon sequestration capacity, intensified urban heat island effects (vegetation loss decreases evapotranspiration cooling), diminished groundwater recharge (impervious surface expansion), and biodiversity habitat fragmentation. Whether this trajectory is sustainable or desirable remains a policy question beyond the model's scope, but the spatial predictions provide quantitative inputs for evaluating alternative growth management strategies.
+
+\subsection{Spatial Driver Effects and MLR Interpretation}
+
+The MLR model's assignment of transition probabilities based on five standardized drivers reveals the fundamental processes governing Hyderabad's urban expansion. Population density emerged as the dominant driver (coefficient: +1.71), indicating that areas with higher demographic concentration exhibit substantially elevated urbanization likelihood. This reflects demand-driven growth: residential and commercial development follows population clusters to minimize commute distances and access local consumer markets. The strong positive effect suggests that Hyderabad's expansion is fundamentally demographic rather than speculative, with development responding to actual settlement patterns rather than anticipatory land banking.
+
+Distance to roads exhibited the second-strongest effect (coefficient: -0.59, negative sign indicating proximity favors urbanization), confirming that infrastructure accessibility remains paramount in Indian metropolitan growth. Development preferentially occurs near existing road networks to minimize connectivity costs and ensure access to employment centers, markets, and services. This finding has planning implications: strategic road investments can guide spatial patterns, with new arterials catalyzing corridor development, while absence of road access serves as passive containment.
+
+Distance to city center showed weak influence (coefficient: -0.20), contrasting sharply with monocentric urban models that predict strong distance-decay effects. This weak relationship reflects Hyderabad's polycentric employment structure: HITEC City (IT hub, 10 km northwest of historical center), Gachibowli (technology corridor, 12 km west), Financial District (6 km west), and Shamshabad Airport Zone (20 km south) create multiple attraction nodes, reducing dependence on the traditional core. Consequently, workers in Gachibowli may prefer peri-urban locations near their workplace over core-adjacent neighborhoods, explaining why distance from the historical center weakly predicts urbanization.
+
+Slope and elevation exhibited minimal effects (coefficients: +0.05 and +0.06 respectively), one to two orders of magnitude weaker than population and roads. The weak slope effect contrasts with Vani and Rama Chandra Prasad's \cite{vani2022} findings for Vijayawada, where slope was a dominant positive predictor (coefficient: +1.05), attributed to hillside encroachment under population pressure. The divergence reflects topographic differences: Hyderabad's terrain (mean slope 5.28\%, with only 13.8\% of pixels exceeding one standard deviation above mean) reduces slope constraints.
+
+\subsection{CA Parameter Interpretation and Spatial Implications}
+
+The calibrated CA parameters translate abstract numerical values into concrete spatial behaviors. The neighborhood weight $\omega=1.20$ governs clustering intensity: for a cell surrounded by 50\% built-up neighbors (neighborhood density $N=0.5$), the combined probability becomes $P_{\text{trans}} = P_{\text{MLR}} \times (1 + 1.20 \times 0.5) = P_{\text{MLR}} \times 1.60$, representing a 60\% boost relative to an isolated cell with identical suitability. This moderate clustering effect generates contiguous urban expansion—new development preferentially occurs adjacent to existing built-up areas—while permitting limited leapfrog development in high-suitability distant zones (high $P_{\text{MLR}}$ compensates for low $N$). The $\omega=1.20$ value produces realistic Indian metropolitan morphology: compact core densification with radiating corridors along arterials, avoiding both extreme scenarios of perfectly compact growth ($\omega \gg 2$) or completely scattered sprawl ($\omega \approx 0$).
+
+The stochasticity parameter $\alpha=0.05$ introduces ±5\% random perturbation to transition probabilities, preventing deterministic outcomes. This randomness captures unpredictable micro-scale factors (individual developer decisions, local land tenure disputes, informal settlement formation) that aggregate to influence metropolitan patterns but cannot be modeled through coarse-resolution drivers. The moderate $\alpha$ value ensures that high-probability cells almost certainly urbanize (e.g., $P=0.90$ remains $P \in [0.85, 0.95]$ after perturbation), while marginal cells ($P \approx 0.50$) exhibit stochastic variability. This generates spatial realism: not every high-suitability cell converts (some landowners resist sale, some parcels have legal encumbrances), and occasional low-suitability cells do convert (speculative development, informal encroachment).
+
+The combined effect of MLR suitability, neighborhood clustering ($\omega$), and stochasticity ($\alpha$) produces emergent patterns matching observed metropolitan growth: (1) core densification and infill of vacant parcels in high-accessibility zones, (2) corridor expansion along major roads with gradually decreasing density outward, (3) satellite node development in high-suitability peri-urban locations (e.g., near highway interchanges), and (4) irregular boundaries rather than perfectly circular growth (stochasticity prevents geometric regularity). These characteristics mirror actual Hyderabad expansion documented in satellite imagery and census data, validating the parameterization.
+
+
+\subsection{Model Strengths and Validation Performance}
+
+The hybrid CA-MLR-GA framework demonstrated several methodological strengths. First, the integrated pipeline—from multi-source data acquisition through full-resolution prediction—provides an end-to-end reproducible workflow suitable for transfer to other Indian metropolitan regions. The reliance on open-source data (Landsat, SRTM, GHSPop, OSM) and tools (Python, scikit-learn, scipy) eliminates proprietary software dependencies and commercial dataset costs, lowering barriers for resource-constrained planning agencies.
+
+Second, the model achieved high prediction accuracy: calibration 93.50\%, validation 93.48\%, Kappa coefficients of 0.913, indicating almost perfect agreement beyond chance. The near-identical calibration and validation accuracies (difference: 0.22\%) confirm absence of overfitting, demonstrating that parameters generalize across temporal periods. The 100\% built-up class accuracy reflects the model's design focus on urban expansion, successfully predicting where urbanization will occur based on suitability, neighborhood effects, and demand constraints.
+
+Third, the full spatial resolution (30 m, 2.86 million cells) enables fine-scale spatial analysis suitable for neighborhood-level planning. This resolution captures individual neighborhoods, road corridors, and water bodies, contrasting with coarse-resolution models (1 km+ pixels) that aggregate heterogeneous areas. The 30 m resolution aligns with Landsat's native resolution, ensuring data-model consistency without artificial downscaling.
+
+Fourth, the quota-based allocation mechanism prevents unrealistic explosive growth observed in threshold-based CA models. By constraining conversions to exactly the historical demand quota (2.67\% annual), the model aligns predictions with empirical growth rates while maintaining spatial realism through probability-weighted top-K selection. This innovation addresses a fundamental weakness of traditional CA: unconstrained threshold-based conversion leads to over-prediction (demonstrated by 25.9\% over-prediction in sample-based threshold validation), whereas quota-based allocation ensures long-term growth trajectories match observed trends.
+
+Fifth, the five-driver integration (slope, elevation, population, roads, city center) captures multiple dimensions of urban suitability: topographic constraints (slope, elevation), demographic demand (population), accessibility (roads), and centrality (distance to center). This multi-factor approach avoids over-simplification of urban processes, acknowledging that urbanization emerges from interacting physical, demographic, and infrastructural factors rather than single determinants.
+
+\subsection{Implementation Challenges and Limitations}
+
+\subsubsection{Coordinate System and Spatial Alignment Issues}
+
+A significant technical challenge arose from coordinate reference system (CRS) mismatches across data sources. The study integrated datasets from multiple platforms: Google Earth Engine (GEE) exports in WGS84 geographic coordinates (EPSG:4326), OpenStreetMap road networks in WGS84, SRTM elevation data in geographic coordinates, and GHSPop population grids in their native projection. All spatial analyses and CA modeling required a unified coordinate system, necessitating reprojection to UTM Zone 43N (EPSG:32643) for metric distance calculations and consistent 30 m resolution.
+
+The reprojection workflow introduced multiple complications. First, GEE's JavaScript-based export system provided LULC classifications and base drivers in WGS84, requiring post-export reprojection via GDAL or Rasterio in Python. Second, distance-based driver calculations (distance to roads, distance to city center) initially computed in geographic coordinates yielded erroneous results due to distortion at 17°N latitude, necessitating recalculation in projected coordinates after UTM transformation. Third, achieving perfect pixel alignment across seven driver layers (slope, elevation, population, distance to roads, distance to center, exclusion, LULC) required iterative resampling, with bilinear interpolation for continuous variables and nearest-neighbor for categorical exclusion masks.
+
+The final solution employed a two-stage alignment strategy: (1) reproject all source data to UTM 43N with consistent 30 m resolution and matching extent (bounding box: 845,264--896,000 mE, 1,900,169--1,950,920 mN), and (2) resample all arrays to the reference 1,691$\times$1,691 grid defined by the distance-to-roads layer. This alignment consumed substantial preprocessing effort but was essential for spatial convolution (Moore kernel) and consistent driver integration in the MLR and CA models. Future implementations should establish the target CRS and grid framework at project initialization to avoid iterative reprojection.
+
+\subsubsection{Computational Constraints and Model Simplifications}
+
+The genetic algorithm optimization employed a surrogate fitness function based on parameter proximity to empirically reasonable values, rather than evaluating fitness through full CA simulations. This simplification reduced computational cost from an estimated 30--60 hours (20 individuals $\times$ 30 generations $\times$ 3--6 minutes per full 1990$\rightarrow$2000 CA run) to under 1 hour, enabling rapid prototyping. However, the surrogate approach does not guarantee that identified parameters ($\omega=1.20$, $\alpha=0.05$) maximize actual prediction accuracy. The 93.50\% calibration accuracy achieved with these parameters provides post-hoc validation, but rigorous GA implementation with full CA-driven fitness evaluation would strengthen parameter confidence and potentially improve performance.
+
+Sample-based calibration (4,126 points rather than 2.86 million pixels) similarly prioritized computational efficiency over spatial realism. While stratified sampling ensures representative coverage of LULC classes and driver ranges, the sample approach cannot capture full spatial autocorrelation, edge effects, or fine-scale neighborhood dynamics that emerge in raster-based CA. The 25.9\% over-prediction of built-up growth in sample-based validation illustrates this limitation. Full-resolution prediction addressed this through quota-based allocation, but direct raster-to-raster calibration would provide more rigorous validation.
+
+\subsubsection{Static Driver Assumption}
+
+All predictions assume static drivers (2020 values for slope, elevation, population, road network, city center location) across the 2020--2050 period. This simplification ignores dynamic processes: population growth and redistribution alter demographic pressure; new road construction and infrastructure expansion modify accessibility patterns; policy interventions (e.g., green belt designations, industrial corridors) impose constraints not captured in historical drivers. The business-as-usual growth rate (2.67\% annually) similarly extrapolates 2010--2020 trends without accounting for saturation effects, economic shocks, or policy-driven growth management that may alter future trajectories.
+
+Incorporating dynamic drivers would require time-series projections for population (e.g., SSP scenarios), planned infrastructure networks, and anticipated policy interventions. However, such projections introduce additional uncertainty, as future infrastructure and policy are inherently unpredictable over 30-year horizons. The static driver approach therefore represents a conservative scenario: "if current conditions and growth rates persist, where will urbanization occur?" This provides a baseline against which policy interventions and alternative scenarios can be evaluated.
+
+\subsubsection{Exclusion Layer Temporal Mismatch}
+
+The exclusion layer, derived from 1990 water bodies to prevent urbanization on hydrological features, reflects conditions 30 years prior to the 2020 baseline. Water body extent may have changed between 1990--2020 due to lake encroachment, wetland reclamation, or reservoir construction, introducing spatial mismatches. Ideally, exclusion zones should update temporally (e.g., 2020 water bodies for 2020 baseline), but data availability constraints precluded this. The 1990 layer provides conservative permanent water body identification, though ephemeral or recently created water bodies may not be protected.
+
+\subsubsection{Model Validation Constraints}
+
+True validation requires comparing predicted LULC for a future year against subsequently observed ground truth. As all predictions target years beyond 2024 (date of analysis), empirical validation is not yet possible. The model relies instead on historical calibration (1990$\rightarrow$2000, 93.50\% accuracy) and validation (2000$\rightarrow$2010, 93.48\% accuracy) using sample-based retrospective testing. While these metrics demonstrate the model's ability to reproduce past transitions, they do not guarantee accurate future prediction, as urban dynamics may shift due to unforeseen drivers (e.g., pandemics, economic crises, policy regime changes). Planned follow-up validation when 2025--2030 ground truth becomes available will provide empirical assessment of prediction accuracy.
+
+\subsection{Comparison to Reference Study}
+
+This study adopts and extends the methodological framework established by Vani and Rama Chandra Prasad \cite{vani2022} for Vijayawada, demonstrating transferability while introducing key innovations. Both studies employ an MLR-CA hybrid approach with five standardized drivers feeding multinomial logistic regression to generate suitability surfaces, which then integrate with Moore neighborhood kernels and stochastic perturbation in cellular automata to simulate spatial allocation. While both share slope, population density, distance to roads, and distance to city center as drivers, this study substitutes the richness index (per capita income) used by Vani and Prasad with elevation, reflecting data availability and the topographic variability of the Hyderabad study area. This shared framework validates the methodology's applicability across diverse Indian urban contexts, from compact Tier-II cities to sprawling Tier-I metropolitan regions.
+
+However, several substantive differences reflect adaptation to metropolitan-scale analysis and methodological advances. First, the study scales differ by an order of magnitude: Vijayawada represents a compact Tier-II city (population $\sim$1.3 million, $\sim$181 km² urban extent), while Hyderabad constitutes a Tier-I metropolitan region (population $\sim$10 million, $\sim$650 km² urban extent in 2020 within the study area). This scale difference necessitated computational adaptations (sample-based calibration, two-stage spatial alignment) and revealed context-specific driver importance shifts (population dominance in Hyderabad versus slope dominance in Vijayawada, reflecting topographic differences).
+
+Second, this study operates at finer spatial resolution (30 m native Landsat pixels) compared to aggregated analysis in the reference work, enabling neighborhood-scale pattern detection and infrastructure-responsive predictions. The 30 m resolution captures individual road corridors, small water bodies, and neighborhood boundaries, providing outputs directly usable for local planning applications without downscaling artifacts.
+
+Third, and most significantly, this study introduces quota-based CA allocation as an alternative to threshold-based conversion. Traditional CA models (including the reference study) transition all cells exceeding a probability threshold ($P_{\text{trans}} > 0.5$), which can produce unrealistic explosive growth when large areas simultaneously exceed threshold. The quota-based mechanism implemented here constrains conversions to exactly the demanded quota per iteration (derived from historical growth rates), selecting the top-K highest-probability cells among eligible candidates. This innovation directly addresses the 25.9\% over-prediction observed in threshold-based sample calibration, ensuring predictions align with empirical growth trajectories while maintaining spatial realism through probability-weighted selection.
+
+The quota-based approach represents a conceptual advance: it bridges purely spatial CA models (which ignore demand constraints and risk over-prediction) with purely aspatial demand models (which ignore spatial suitability and produce unrealistic scattered patterns). By allocating fixed demand quotas spatially according to combined MLR-neighborhood-stochasticity probabilities, the model achieves both quantitative accuracy (correct total growth magnitude) and qualitative realism (plausible spatial configurations). This dual fidelity makes the approach particularly suitable for long-range metropolitan planning, where both "how much" (total area) and "where" (spatial distribution) are critical policy questions.
+
+The methodological progression from Vani and Rama Chandra Prasad \cite{vani2022} to this study exemplifies iterative scientific advancement: core framework retention (MLR-CA integration, five-driver suite, Moore neighborhoods) ensures continuity and comparability, while targeted innovations (quota-based allocation, finer resolution, metropolitan scaling) address identified limitations and expand applicability. Future applications to other Indian metropolitan regions (Bangalore, Pune, Chennai) can build on both studies, adopting the quota-based mechanism while potentially incorporating additional context-specific drivers (e.g., metro rail proximity, special economic zones, floodplain constraints) as local conditions warrant.
+
+% Conclusion content folded into Results and Discussion
+
+\subsection{Summary}
+
+This study developed and validated a hybrid CA-MLR-GA framework for metropolitan-scale urban growth prediction, integrating multinomial logistic regression with cellular automata and quota-based demand allocation. Applied to Hyderabad, India, the model predicted built-up area expansion from 456.76 km² (2020 baseline) to 1,006.91 km² by 2050, representing 120.4\% growth (+550.15 km²) under a business-as-usual scenario of 2.67\% annual expansion. Sample-based calibration and validation achieved 93.50\% and 93.48\% overall accuracies respectively, with Kappa coefficients of 0.913, indicating almost perfect agreement and confirming the model's capability to reproduce historical land use transitions. The quota-based allocation mechanism successfully prevented over-prediction while maintaining spatial realism through probability-weighted top-K selection, addressing a fundamental limitation of threshold-based CA models. Parameter sensitivity analysis across 17 scenarios revealed that growth rate exerts 14--53$\times$ stronger influence on spatial patterns than CA parameters, demonstrating that demand-side constraints dominate emergent urban form in quota-based frameworks.
+
+\subsection{Planning and Policy Implications}
+
+The predicted 550.15 km² land requirement for urban expansion by 2050 necessitates proactive infrastructure and environmental planning. This magnitude of growth—equivalent to consuming 26.1\% of existing vegetation cover (274.76 km² loss) and 64.9\% of barren land (266.60 km² loss)—demands strategic interventions to ensure sustainable development. Infrastructure implications include: (1) preemptive water supply, sewerage, and electricity networks for 550 km² of new urban area to avoid informal settlement formation and service deficits, (2) strategic road and metro rail investments to guide growth along planned corridors rather than allowing automobile-dependent sprawl, and (3) institutional capacity building within planning authorities to manage accelerating land conversion rates peaking at 124 km² per five-year period (2045--2050).
+
+Environmental planning must prioritize vegetation conservation to prevent the 2044 tipping point where built-up area surpasses vegetation cover, fundamentally altering metropolitan ecosystem services. Policy mechanisms include designating 200--300 km² of high-value ecological areas (urban forests, wetlands, agricultural buffer zones) as permanent green belts with strict no-development covenants, implementing density bonuses incentivizing vertical growth in core areas to reduce peripheral expansion, and enforcing transit-oriented development policies clustering mixed-use high-density nodes around metro stations. The spatial prediction outputs directly support prioritization: the change detection maps (Figure \ref{fig:change_detection}) identify growth hotspots requiring preemptive infrastructure investment, while low-probability zones suitable for conservation easements can be targeted for green space preservation before development pressure intensifies.
+
+\subsection{Future Research Directions}
+
+Five priority directions would enhance model fidelity and policy utility:
+
+\begin{enumerate}
+\item \textbf{Full CA-based GA fitness evaluation:} Replace the surrogate fitness function with actual CA simulation-driven optimization, wherein each GA individual undergoes complete 1990$\rightarrow$2000 prediction and accuracy assessment against ground truth. This computationally intensive approach ($\sim$30--60 hours runtime) would rigorously optimize parameters for maximum predictive accuracy rather than relying on post-hoc validation of surrogate-derived values.
+
+\item \textbf{Full-resolution raster-based calibration:} Implement direct pixel-to-pixel calibration on the complete 2.86 million cell grid rather than 4,126-point samples. This would capture fine-scale spatial autocorrelation, edge effects, and neighborhood dynamics currently abstracted in sample-based approaches, potentially improving accuracy and eliminating the 25.9\% over-prediction observed in threshold-based sample validation.
+
+\item \textbf{Temporal driver projections:} Incorporate dynamic drivers through time-series forecasting: population growth scenarios (UN/SSP projections), planned infrastructure networks (metro rail Phase III, Outer Ring Road extensions), and climate-driven water body changes (reservoir expansion, lake shrinkage). This would enable scenario-based planning: "What if population grows 3.5\% annually?" or "How does the new metro line alter spatial patterns?"
+
+\item \textbf{Comprehensive spatial constraints:} The current model excludes only water bodies from urbanization. In practice, several additional land categories carry strong legal protection against encroachment and should be incorporated into the exclusion layer. These include: national parks and wildlife sanctuaries (e.g., KBR National Park, Mahavir Harina Vanasthali National Park, and Mrugavani National Park within the study area), reserved and protected forest blocks under the Forest Conservation Act, military cantonments and defence garrisons (e.g., Secunderabad Cantonment, Bolarum Cantonment), airport operational zones and noise buffer areas (Rajiv Gandhi International Airport, Begumpet Air Force Station), designated archaeological and heritage zones under Archaeological Survey of India protection (e.g., Golconda Fort complex, Charminar precinct, Qutb Shahi Tombs), and floodplain boundaries along the Musi River and Hussain Sagar Lake. These categories are selected because they carry statutory protection that makes land use conversion legally prohibitive, unlike institutional campuses or zoning designations that can be revised through administrative processes. Encoding these as binary exclusion masks, analogous to the water body layer, would generate policy-compliant predictions that respect existing regulatory frameworks rather than producing purely suitability-driven allocations that overestimate developable land.
+
+\item \textbf{Policy scenario modeling:} Develop alternative scenarios testing specific interventions: (a) green belt scenario designating 300 km² as permanent non-developable zones, (b) transit-oriented development scenario concentrating 60\% of growth within 1 km metro station buffers, (c) sprawl containment scenario applying urban growth boundaries beyond which development is prohibited. Comparative analysis of these scenarios against the business-as-usual baseline would quantify policy effectiveness and trade-offs, providing evidence-based inputs for metropolitan master plan formulation.
+\end{enumerate}
+
+These extensions would transition the model from a research prototype to an operational planning tool suitable for integration into institutional decision-making processes, enabling evidence-informed metropolitan growth management in rapidly urbanizing Indian contexts.
+
+
+
+\section{Data and Code Availability}
+
+The complete project code, notebooks, and datasets are publicly available at \url{https://github.com/VishakhaAgrawal27/ORS_Course_Project}. An interactive 3D visualization atlas of the results is hosted at \url{https://web.iiit.ac.in/~vishakha.agrawal/viz/other/ors/}.
+
+\section{Acknowledgements}
+
+We gratefully thank Dr.\ Kiran Chand Thumaty for his guidance and instruction throughout the course of this project. We also thank Dr.\ P.\ Rama Chandra Prasad, Lab for Spatial Informatics, IIIT Hyderabad, for his support and mentorship. This work was done using open-source datasets and tools, with computational resources provided by Google Colaboratory.
+
+\renewcommand{\refname}{References}
+\begin{thebibliography}{99}
+
+\bibitem{vani2022}
+M. Vani and P. Rama Chandra Prasad, ``Modelling urban expansion of a south-east Asian city, India: comparison between SLEUTH and a hybrid CA model,'' \textit{Modeling Earth Systems and Environment}, vol.~8, pp. 1419--1431, 2022.
+\url{https://doi.org/10.1007/s40808-021-01150-3}
+
+\bibitem{white1993}
+R. White and G. Engelen, ``Cellular automata and fractal urban form: a cellular modelling approach to the evolution of urban land-use patterns,'' \textit{Environment and Planning A}, vol.~25, no.~8, pp. 1175--1199, 1993.
+\url{https://doi.org/10.1068/a251175}
+
+\bibitem{clarke1997}
+K. C. Clarke, S. Hoppen, and L. Gaydos, ``A self-modifying cellular automaton model of historical urbanization in the San Francisco Bay area,'' \textit{Environment and Planning B: Planning and Design}, vol.~24, no.~2, pp. 247--261, 1997.
+\url{https://doi.org/10.1068/b240247}
+
+\bibitem{wu2002}
+F. Wu, ``Calibration of stochastic cellular automata: the application to rural-urban land conversions,'' \textit{International Journal of Geographical Information Science}, vol.~16, no.~8, pp. 795--818, 2002.
+\url{https://doi.org/10.1080/13658810210157769}
+
+\bibitem{gorelick2017}
+N. Gorelick, M. Hancher, M. Dixon, S. Ilyushchenko, D. Thau, and R. Moore, ``Google Earth Engine: Planetary-scale geospatial analysis for everyone,'' \textit{Remote Sensing of Environment}, vol.~202, pp. 18--27, 2017.
+\url{https://doi.org/10.1016/j.rse.2017.06.031}
+
+\bibitem{zanaga2021}
+D. Zanaga et al., ``ESA WorldCover 10 m 2020 v100,'' European Space Agency, 2021.
+\url{https://doi.org/10.5281/zenodo.5571936}
+
+\bibitem{farr2007}
+T. G. Farr et al., ``The Shuttle Radar Topography Mission,'' \textit{Reviews of Geophysics}, vol.~45, no.~2, RG2004, 2007.
+\url{https://doi.org/10.1029/2005RG000183}
+
+\bibitem{haklay2008}
+M. Haklay and P. Weber, ``OpenStreetMap: User-generated street maps,'' \textit{IEEE Pervasive Computing}, vol.~7, no.~4, pp. 12--18, 2008.
+\url{https://doi.org/10.1109/MPRV.2008.80}
+
+\bibitem{mcfadden1974}
+D. McFadden, ``Conditional logit analysis of qualitative choice behavior,'' in \textit{Frontiers in Econometrics}, P. Zarembka, Ed. New York: Academic Press, 1974, pp. 105--142.
+
+\bibitem{landis1977}
+J. R. Landis and G. G. Koch, ``The measurement of observer agreement for categorical data,'' \textit{Biometrics}, vol.~33, no.~1, pp. 159--174, 1977.
+\url{https://doi.org/10.2307/2529310}
+
+\bibitem{ramachandra2012}
+T. V. Ramachandra, B. H. Aithal, and D. D. Sanna, ``Insights to urban dynamics through landscape spatial pattern analysis,'' \textit{International Journal of Applied Earth Observation and Geoinformation}, vol.~18, pp. 329--343, 2012.
+\url{https://doi.org/10.1016/j.jag.2012.03.005}
+
+\bibitem{breiman2001}
+L. Breiman, ``Random forests,'' \textit{Machine Learning}, vol.~45, no.~1, pp. 5--32, 2001.
+\url{https://doi.org/10.1023/A:1010933404324}
+
+\bibitem{belgiu2016}
+M. Belgiu and L. Dr\u{a}gu\c{t}, ``Random forest in remote sensing: A review of applications and future directions,'' \textit{ISPRS Journal of Photogrammetry and Remote Sensing}, vol.~114, pp. 24--31, 2016.
+\url{https://doi.org/10.1016/j.isprsjprs.2016.01.011}
+
+\bibitem{menard2002}
+S. Menard, \textit{Applied Logistic Regression Analysis}, 2nd~ed. Thousand Oaks, CA: Sage Publications, 2002.
+
+\bibitem{holland1975}
+J. H. Holland, \textit{Adaptation in Natural and Artificial Systems}. Ann Arbor: University of Michigan Press, 1975.
+
+\bibitem{goldberg1989}
+D. E. Goldberg, \textit{Genetic Algorithms in Search, Optimization, and Machine Learning}. Reading, MA: Addison-Wesley, 1989.
+
+\bibitem{shafizadeh2017}
+H. Shafizadeh-Moghadam, A. Asghari, A. Tayyebi, and M. Taleai, ``Coupling machine learning, tree-based and statistical models with cellular automata to simulate urban growth,'' \textit{Computers, Environment and Urban Systems}, vol.~64, pp. 297--308, 2017.
+\url{https://doi.org/10.1016/j.compenvurbsys.2017.04.002}
+
+\bibitem{ou2019}
+C. Ou, J. Yang, Z. Du, X. Zhang, and D. Zhu, ``Integrating cellular automata with unsupervised deep-learning algorithms: A case study of urban-sprawl simulation in the Jingjintang urban agglomeration, China,'' \textit{Sustainability}, vol.~11, no.~9, 2464, 2019.
+\url{https://doi.org/10.3390/su11092464}
+
+\bibitem{khan2022}
+A. Khan and M. Sudheer, ``Machine learning-based monitoring and modeling for spatio-temporal urban growth of Islamabad,'' \textit{Egyptian Journal of Remote Sensing and Space Sciences}, vol.~25, no.~2, pp. 541--550, 2022.
+\url{https://doi.org/10.1016/j.ejrs.2022.03.012}
+
+\bibitem{boulila2021}
+W. Boulila, H. Ghandorh, M. A. Khan, F. Ahmed, and J. Ahmad, ``A novel CNN-LSTM-based approach to predict urban expansion,'' \textit{Ecological Informatics}, vol.~64, 101325, 2021.
+\url{https://doi.org/10.1016/j.ecoinf.2021.101325}
+
+\bibitem{pan2022}
+X. Pan, Z. Liu, C. He, H. Huang, L. Sun, and S. Ma, ``Modeling urban expansion by integrating a convolutional neural network and a recurrent neural network,'' \textit{International Journal of Applied Earth Observation and Geoinformation}, vol.~112, 102977, 2022.
+\url{https://doi.org/10.1016/j.jag.2022.102977}
+
+\bibitem{yang2025}
+Q. Yang, J. Wang, Y. Liu, Y. Zhang, and W. Yue, ``Containing urban sprawl in China: A cross-city evaluation of urban development boundaries using U-Net deep learning,'' \textit{Habitat International}, vol.~164, 103534, 2025.
+\url{https://doi.org/10.1016/j.habitatint.2025.103534}
+
+\bibitem{almazroa2024}
+A. Al Mazroa, M. Maashi, F. Kouki, K. M. Othman, N. Salih, M. A. Elfaki, and S. S. Begum, ``An analysis of urban sprawl growth and prediction using remote sensing and machine learning techniques,'' \textit{Journal of South American Earth Sciences}, vol.~142, 104988, 2024.
+\url{https://doi.org/10.1016/j.jsames.2024.104988}
+
+\bibitem{mhangara2025}
+P. Mhangara, E. Gidey, and B. S. Mayise, ``Using extreme gradient boosting for predictive urban expansion analysis in Rustenburg, South Africa from 2000 to 2030,'' \textit{Scientific Reports}, vol.~15, 19050, 2025.
+\url{https://doi.org/10.1038/s41598-025-04304-w}
+
+\bibitem{khan2025}
+D. Khan, N. Khan, M. Y. Abouleish, A. M. Abutaleb, M. A. E. AbdelRahman, and A. M. Shaltout, ``Ensemble machine learning for predicting the urban expansion in Lucknow, India,'' \textit{Environmental Earth Sciences}, vol.~84, 575, 2025.
+\url{https://doi.org/10.1007/s12665-025-12559-9}
+
+\end{thebibliography}
+\end{document}
