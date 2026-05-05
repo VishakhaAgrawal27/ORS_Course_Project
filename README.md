@@ -1,6 +1,6 @@
-# Quota-Based Cellular Automata Modeling of Urban Expansion in Hyderabad Metropolitan Area (2020-2050)
+# Cellular Automata Modeling of Urban Expansion in Hyderabad Metropolitan Area (2020-2050)
 
-**Course:** Optical Remote Sensing (ORS), Spring 2025
+**Course:** Optical Remote Sensing (ORS), Spring 2026
 
 **Team:**
 Vishakha Agrawal (2023101040), Goni Anagha (2023101124), Gandlur Valli (2023102068), Nunna Sri Abhinaya (2023102071)
